@@ -3,6 +3,7 @@ import {
   emptyStoredData,
   hourBlockListSchema,
   profileSchema,
+  progressionSchema,
   storedDataV1Schema,
   type StoredDataV1,
 } from "./schema";
@@ -55,6 +56,11 @@ function recoverPartial(data: Record<string, unknown>): StoredDataV1 {
       data.settings as { selectedYearId: string | null }
     ).selectedYearId;
   }
+
+  const progressionResult = progressionSchema
+    .nullable()
+    .safeParse(data.progression);
+  if (progressionResult.success) base.progression = progressionResult.data;
 
   return base;
 }

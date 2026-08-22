@@ -2,18 +2,29 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import { exportToJson, importFromJson } from "../storage/exportImport";
 import { clear, load, save } from "../storage/localStorage";
-import { periodEntryKey, type StoredDataV1 } from "../storage/schema";
+import {
+  periodEntryKey,
+  type StoredDataV1,
+  type progressionSchema,
+} from "../storage/schema";
 import type { HourBlock, Profile } from "../engine/types";
+import type { z } from "zod";
+
+type Progression = z.infer<typeof progressionSchema>;
 
 interface AppDataValue {
   profile: Profile | null;
   setProfile: (profile: Profile) => void;
+  progression: Progression | null;
+  setProgression: (progression: Progression | null) => void;
   getPeriodBlocks: (yearId: string, periodNumber: number) => HourBlock[];
   setPeriodBlocks: (
     yearId: string,
@@ -33,18 +44,39 @@ const AppDataContext = createContext<AppDataValue | null>(null);
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<StoredDataV1>(() => load().data);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const hasMounted = useRef(false);
 
-  const persist = useCallback((next: StoredDataV1) => {
-    setData(next);
-    const result = save(next);
-    setSaveError(result.ok ? null : (result.error ?? "Couldn't save."));
+  // Every setter below only ever queues a *functional* update, so calling
+  // several of them in the same handler (e.g. Setup saving both the
+  // profile and the progression info in one click) composes correctly
+  // instead of each one clobbering the other with a stale `data` snapshot.
+  const update = useCallback((patch: (prev: StoredDataV1) => StoredDataV1) => {
+    setData(patch);
   }, []);
+
+  // Persisting is a side effect of the resolved state, not of any one
+  // setter call, so it can't race with `update` calls made in the same tick.
+  useEffect(() => {
+    if (!hasMounted.current) {
+      hasMounted.current = true;
+      return;
+    }
+    const result = save(data);
+    setSaveError(result.ok ? null : (result.error ?? "Couldn't save."));
+  }, [data]);
 
   const setProfile = useCallback(
     (profile: Profile) => {
-      persist({ ...data, profile });
+      update((prev) => ({ ...prev, profile }));
     },
-    [data, persist],
+    [update],
+  );
+
+  const setProgression = useCallback(
+    (progression: Progression | null) => {
+      update((prev) => ({ ...prev, progression }));
+    },
+    [update],
   );
 
   const getPeriodBlocks = useCallback(
@@ -56,22 +88,25 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   const setPeriodBlocks = useCallback(
     (yearId: string, periodNumber: number, blocks: HourBlock[]) => {
-      persist({
-        ...data,
+      update((prev) => ({
+        ...prev,
         periodEntries: {
-          ...data.periodEntries,
+          ...prev.periodEntries,
           [periodEntryKey(yearId, periodNumber)]: blocks,
         },
-      });
+      }));
     },
-    [data, persist],
+    [update],
   );
 
   const setSelectedYearId = useCallback(
     (id: string | null) => {
-      persist({ ...data, settings: { ...data.settings, selectedYearId: id } });
+      update((prev) => ({
+        ...prev,
+        settings: { ...prev.settings, selectedYearId: id },
+      }));
     },
-    [data, persist],
+    [update],
   );
 
   const exportJson = useCallback(() => exportToJson(data), [data]);
@@ -80,12 +115,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     (json: string) => {
       const result = importFromJson(json);
       if (result.ok && result.data) {
-        persist(result.data);
+        const imported = result.data;
+        update(() => imported);
         return { ok: true, error: undefined };
       }
       return { ok: false, error: result.error };
     },
-    [persist],
+    [update],
   );
 
   const wipe = useCallback(() => {
@@ -98,6 +134,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     () => ({
       profile: data.profile,
       setProfile,
+      progression: data.progression,
+      setProgression,
       getPeriodBlocks,
       setPeriodBlocks,
       selectedYearId: data.settings.selectedYearId,
@@ -109,8 +147,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }),
     [
       data.profile,
+      data.progression,
       data.settings.selectedYearId,
       setProfile,
+      setProgression,
       getPeriodBlocks,
       setPeriodBlocks,
       setSelectedYearId,

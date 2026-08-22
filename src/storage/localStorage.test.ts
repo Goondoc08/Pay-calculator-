@@ -29,6 +29,7 @@ const sample: StoredDataV1 = {
     ],
   },
   settings: { selectedYearId: "FY27" },
+  progression: null,
 };
 
 describe("load", () => {

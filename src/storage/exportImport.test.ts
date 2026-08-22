@@ -41,6 +41,11 @@ const sample: StoredDataV1 = {
     ],
   },
   settings: { selectedYearId: "FY27" },
+  progression: {
+    grade: "F1",
+    anniversaryDate: "2027-04-01",
+    receivingStep: true,
+  },
 };
 
 describe("export / import", () => {
