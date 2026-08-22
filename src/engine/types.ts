@@ -1,7 +1,6 @@
-import type { PayYear } from "../data/schema";
-
 export type ShiftLetter = "A" | "B" | "C";
-export type PayGrade = keyof PayYear["payPlan"];
+/** F1 (Fire Fighter) .. F4 (post-merger Battalion Chief) — see docs/PAY_PLAN.md. */
+export type PayGrade = "F1" | "F2" | "F3" | "F4";
 
 /** Where a block of hours is paid out: cash on this check, or banked (comp/accrue). */
 export type Destination = "cash" | "comp" | "accrue";

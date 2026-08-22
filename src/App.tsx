@@ -1,14 +1,105 @@
+import { useState } from "react";
+import { AppDataProvider, useAppData } from "./app/AppData";
+import { findPeriodForDate } from "./app/period";
+import { getYear, resolveActiveYear, todayIso } from "./app/years";
+import { PeriodScreen } from "./screens/PeriodScreen";
+import { SettingsScreen } from "./screens/SettingsScreen";
+import { SetupScreen } from "./screens/SetupScreen";
+import { YearScreen } from "./screens/YearScreen";
+
+type Tab = "period" | "year" | "settings";
+
+function TabBar({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void }) {
+  const tabs: { key: Tab; label: string }[] = [
+    { key: "period", label: "This Period" },
+    { key: "year", label: "Year" },
+    { key: "settings", label: "Settings" },
+  ];
+  return (
+    <nav className="flex border-b border-slate-800 bg-slate-950">
+      {tabs.map((t) => (
+        <button
+          key={t.key}
+          type="button"
+          onClick={() => onChange(t.key)}
+          className={`flex-1 py-3 text-sm font-medium ${
+            tab === t.key
+              ? "border-b-2 border-emerald-500 text-emerald-400"
+              : "text-slate-400"
+          }`}
+        >
+          {t.label}
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+function AppShell() {
+  const { profile, selectedYearId, setSelectedYearId } = useAppData();
+  const [setupOpen, setSetupOpen] = useState(profile === null);
+  const [tab, setTab] = useState<Tab>("period");
+
+  const today = todayIso();
+  const year = selectedYearId
+    ? (getYear(selectedYearId) ?? resolveActiveYear(today))
+    : resolveActiveYear(today);
+
+  const [periodNumber, setPeriodNumber] = useState<number>(
+    () => findPeriodForDate(year, today)?.n ?? 1,
+  );
+  const period =
+    year.periods.find((p) => p.n === periodNumber) ?? year.periods[0];
+
+  if (setupOpen || !profile) {
+    return <SetupScreen year={year} onDone={() => setSetupOpen(false)} />;
+  }
+
+  return (
+    <div className="min-h-dvh bg-slate-950 text-slate-100">
+      <TabBar tab={tab} onChange={setTab} />
+      {tab === "period" && (
+        <PeriodScreen
+          year={year}
+          profile={profile}
+          period={period}
+          onNavigate={setPeriodNumber}
+        />
+      )}
+      {tab === "year" && (
+        <YearScreen
+          year={year}
+          profile={profile}
+          onSelectPeriod={(n) => {
+            setPeriodNumber(n);
+            setTab("period");
+          }}
+          onSelectYear={(yearId) => {
+            const y = getYear(yearId);
+            if (y) {
+              setSelectedYearId(yearId);
+              setPeriodNumber(y.periods[0].n);
+            }
+          }}
+        />
+      )}
+      {tab === "settings" && (
+        <SettingsScreen
+          onEditSetup={() => setSetupOpen(true)}
+          onWiped={() => {
+            setSetupOpen(true);
+            setTab("period");
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
 export function App() {
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-slate-950 px-6 text-center text-slate-100">
-      <h1 className="text-2xl font-semibold">48/96 Pay Calculator</h1>
-      <p className="max-w-sm text-sm text-slate-400">
-        Scaffold is live. The pay engine and interface land in later phases.
-      </p>
-      <p className="max-w-sm text-xs text-slate-500">
-        This is an unofficial estimation tool for personal comparison. It is not
-        a payroll record and carries no authority in a pay dispute.
-      </p>
-    </main>
+    <AppDataProvider>
+      <AppShell />
+    </AppDataProvider>
   );
 }
