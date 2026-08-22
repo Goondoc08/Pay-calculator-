@@ -160,9 +160,15 @@ Volume matters more than perfection; a handful of stubs can't distinguish these.
 |---|---|---|
 | Is the **top-out bonus** in the FLSA regular rate? Sheet has the field, no formula reads it. | A period with OT while a top-out bonus was on file | High |
 | **Anniversary raise** — split mid-period or start next period? | The period containing the anniversary date | High |
-| When **holiday worked**, is the 1.5× always paid as cash, or can it also be banked as comp (like holiday-observed can be banked as accrued)? | A stub or sheet example where a holiday was worked *and* comped rather than paid | High |
 | Does the **step-up blended rate** match payroll's, now that step-up is confirmed as a flat rank rate rather than a % bump? | A period mixing regular and step-up hours, over 106 | Medium |
 | Does **FD (driver diff)** pay the same way as officer-rank step-up (F3/F4), or differently? | A step-up stub specifically for a driver-covering assignment | Low |
+
+**Resolved, this round:** any worked hours (regular OT or holiday-worked) can be
+diverted to comp instead of cash. For check-verification purposes the *rate* at
+which comp time banks (e.g. 1.5 comp hours per hour of OT comped) doesn't matter —
+it only affects a balance this tool doesn't track. The engine only needs a binary
+per hour-block: paid this check, or not. Comped hours contribute $0 to gross,
+full stop, regardless of the internal banking multiplier.
 
 ## 6. Paystub handling
 
@@ -335,14 +341,19 @@ The engine's real unit of input isn't "hours worked" — it's a typed block of
 hours, matching what actually appears on a paystub rather than the sheet's
 simplified HO/HW/PTO columns:
 
-| Type | Counts toward 106-hr cap? | Payout |
+| Type | Counts toward 106-hr cap? | Paid this check, or banked? |
 |---|---|---|
-| Regular worked | Yes | Straight time (+ FLSA premium on hours past 106) |
-| Holiday worked | **No** | 1.5× — cash or banked as comp (open question, see §5) |
-| Holiday observed (not worked) | No | 12 hrs straight — member's choice: cash now, or accrue to use later |
-| PTO taken (vacation / sick / comp) | No | Straight time, paid |
+| Regular worked | Yes | Paid straight (+ FLSA premium on hours past 106), or diverted to comp — member's choice, per block |
+| Holiday worked | No | Paid at 1.5×, or diverted to comp — member's choice, per block |
+| Holiday observed (not worked) | No | Paid at 12 hrs straight, or accrued to use later — member's choice |
+| PTO taken (vacation / sick / comp) | No | Paid straight |
 | Step-up / acting pay | Yes | Rank-based flat rate (F2/F3/F4), blended into the FLSA rate when mixed with regular hours |
 | TIFMAS deployment | Yes (confirm) | Own premium structure, TBD from a TIFMAS stub |
+
+Banked hours (comp or accrued) contribute **$0** to this check's gross —
+regardless of what rate they bank at internally (e.g. OT comps at 1.5 banked
+hours per hour worked). That conversion only matters to a bank balance this tool
+doesn't track; for verification, "banked" just means "not on this check."
 
 **The holiday rule, as explained directly:** `HO`/`HW` auto-populate from the
 shift schedule intersected with the holiday calendar (purple cells in the
