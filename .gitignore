@@ -1,0 +1,12 @@
+node_modules
+dist
+dist-ssr
+dev-dist
+coverage
+*.local
+.DS_Store
+
+# raw pay/paystub source workbooks — never committed, see docs/BUILD_PLAN.md §6
+data/source/
+*.xlsx
+*.tsbuildinfo

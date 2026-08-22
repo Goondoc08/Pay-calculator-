@@ -1,0 +1,5 @@
+docs/
+dist/
+dev-dist/
+coverage/
+src/data/*.json
