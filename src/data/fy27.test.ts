@@ -31,6 +31,26 @@ describe("fy27.json", () => {
     expect(year.holidays.every((h) => h.hours === 12)).toBe(true);
   });
 
+  it("holiday names match the City of Pearland's official 2027 holiday memo", () => {
+    // Confirmed 2026-08-22 against "2027 Holiday Calendar" (HR, 2026-07-06).
+    // Independence Day and the Nov/Dec 2026 dates use the ACTUAL calendar
+    // date, not the memo's M-F "observed" shift — fire crews are paid
+    // holiday pay for the date their tour actually covers, confirmed
+    // directly (e.g. a holiday landing on a Sunday still pays for the
+    // Sunday worked, not the following Monday).
+    const byDate = Object.fromEntries(
+      year.holidays.map((h) => [h.date, h.name]),
+    );
+    expect(byDate["2027-01-01"]).toBe("New Year's Day");
+    expect(byDate["2027-01-18"]).toBe("Martin Luther King Jr. Day");
+    expect(byDate["2027-03-26"]).toBe("Good Friday");
+    expect(byDate["2027-05-31"]).toBe("Memorial Day");
+    expect(byDate["2027-07-04"]).toBe("Independence Day");
+    expect(byDate["2027-09-06"]).toBe(
+      "Labor Day / September 11th Memorial Day",
+    );
+  });
+
   it("matches the official FY27 pay plan (docs/PAY_PLAN.md)", () => {
     expect(year.payPlan.F1[0]).toBe(26.8173);
     expect(year.payPlan.F2[0]).toBe(35.3302);

@@ -228,6 +228,48 @@ function findCycleAnchor(periods: PeriodExtract[], fyStart: string): string {
   throw new Error("No 24/24/0/0/0/0 cycle anchor fit the observed schedule");
 }
 
+/** Anonymous Gregorian algorithm — Easter Sunday for a given year. */
+function easterSunday(year: number): Date {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31); // 3=March, 4=April
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+function isGoodFriday(d: Date): boolean {
+  const good = new Date(easterSunday(d.getUTCFullYear()));
+  good.setUTCDate(good.getUTCDate() - 2);
+  return (
+    good.getUTCFullYear() === d.getUTCFullYear() &&
+    good.getUTCMonth() === d.getUTCMonth() &&
+    good.getUTCDate() === d.getUTCDate()
+  );
+}
+
+/**
+ * Confirmed against the City of Pearland's official 2027 holiday memo
+ * (HR, 2026-07-06): matches every FY27 holiday date. Two department-specific
+ * notes baked in below —
+ *
+ * - Fire crews are paid holiday pay for the ACTUAL calendar date their
+ *   24-hr tour covers, not the city's M-F "observed" shift (e.g. a holiday
+ *   landing on a Sunday still pays for the Sunday, not the following
+ *   Monday) — confirmed directly, not inferred.
+ * - State law (H.B. 2113, Local Gov't Code §142.0013(c)) requires the city
+ *   to label the Labor Day holiday "September 11th Memorial Day" for
+ *   firefighters specifically — same date, different name, fire-only.
+ */
 function guessHolidayName(iso: string): string {
   const d = new Date(`${iso}T00:00:00Z`);
   const month = d.getUTCMonth(); // 0-indexed
@@ -241,8 +283,10 @@ function guessHolidayName(iso: string): string {
   if (month === 6 && day === 4) return "Independence Day";
   if (month === 0 && dow === 1 && day >= 15 && day <= 21)
     return "Martin Luther King Jr. Day";
+  if (isGoodFriday(d)) return "Good Friday";
   if (month === 4 && dow === 1 && day >= 25) return "Memorial Day";
-  if (month === 8 && dow === 1 && day <= 7) return "Labor Day";
+  if (month === 8 && dow === 1 && day <= 7)
+    return "Labor Day / September 11th Memorial Day";
   if (month === 10 && dow === 4 && day >= 22 && day <= 28)
     return "Thanksgiving";
   if (month === 10 && dow === 5 && day >= 23 && day <= 29)
