@@ -98,7 +98,14 @@ engine produced it and a test covers it.
     "assignment": { "QA/QI": 1.10 }
   },
 
-  "stepUpRates": { "F2": 35.3302, "F3": 41.7567, "F4": 48.8774 },
+  "payPlan": {
+    // index 0 = Step 0, from the official pay plan (docs/PAY_PLAN.md).
+    // Step-up pay = payPlan[targetGrade][0], regardless of the acting member's own step.
+    "F1": [26.8173, 27.6218, 28.4505, 29.3040, 30.1831, 31.0886, 32.0213, 32.9819, 33.9714],
+    "F2": [35.3302, 36.3901, 37.4818, 38.6063, 39.7644],
+    "F3": [41.7566, 43.0093, 44.2996, 45.6286, 46.9974],
+    "F4": [48.8773, 50.3436, 51.8539, 53.4095]
+  },
 
   "raise": { "pct": 3.0, "trigger": "anniversary", "proration": "TBD" }
 }
@@ -109,6 +116,17 @@ the 3% to an entire pay period based on that period's *start* date, so a period
 straddling the anniversary pays the new rate on all 120 hours. Real payroll
 usually splits the period or starts the raise the following period. A paystub
 from the period containing the anniversary settles it.
+
+**This matters more than it used to.** The department is moving to civil
+service: step progression now lands on each member's own hire or promotion date
+rather than a single fiscal-year event for everyone, so this proration question
+applies to nearly every member individually going forward, not to one shared
+date. See `docs/PAY_PLAN.md` for the full breakdown, including that "+3%" was
+always an approximation of a real step-table lookup, not an arbitrary number —
+the official step tables are now in the repo, so the correct fix is a table
+lookup (next step's published rate) rather than a percentage multiplier. Kept as
+a manual rate update in Setup for v1 either way; automatic date-driven tracking
+is a v2 feature the official tables make straightforward later.
 
 The importer extracts holiday *dates* rather than trusting the sheet's hand-wired
 per-shift holiday formulas, then prints a table for human confirmation against the
@@ -152,16 +170,17 @@ Volume matters more than perfection; a handful of stubs can't distinguish these.
 | Does **holiday worked** pay at 1.5× the *effective* rate (base + incentive), or base only? | Effective rate — confirmed exactly (36 hrs × 1.5 × $38.2146 = $2,063.58) | 12/20 real check |
 | Does **PTO** stay out of the 106-hr OT count? | Yes — confirmed directly | Member's own explanation of FLSA cap reset rules |
 | Do **holiday-worked hours** also stay out of the 106-hr count (same as PTO)? | Yes — resolves the 12/20 check's $0 FLSA premium, which the sheet's formula (as written) would not have predicted | Member's explanation + matches the 12/20 check exactly |
-| Does **step-up** mean a flat rank-based rate (F2/F3/F4), or a % bump? | Flat rank rate — the member's HR base rate ($35.3302) matches `F2` in the FY27 sheet exactly | HR pay-rate screenshot |
+| Does **step-up** mean a flat rank-based rate (F2/F3/F4), or a % bump? | **Fully resolved:** Step 0 of the rank/role you're covering, regardless of your own current step — confirmed to the cent against both years' pay plans. Also explains `FD — Fire Ride Up Driver Diff` (same mechanism, riding up into F2). See `docs/PAY_PLAN.md`. | Official FY26/FY27 pay plan documents |
+| Comp-banking rate for OT/holiday-worked | Irrelevant to check verification — see prior resolution below | Member's explanation |
+| Is the **106-hr FLSA threshold** correct? | Confirmed at the source, not just inferred: "Fire Ops 2912 Personnel are assigned to a 14/106 FLSA work period." | Official pay plan |
 
 **Still open:**
 
 | Open question | Stub that answers it | Priority |
 |---|---|---|
-| Is the **top-out bonus** in the FLSA regular rate? Sheet has the field, no formula reads it. | A period with OT while a top-out bonus was on file | High |
-| **Anniversary raise** — split mid-period or start next period? | The period containing the anniversary date | High |
-| Does the **step-up blended rate** match payroll's, now that step-up is confirmed as a flat rank rate rather than a % bump? | A period mixing regular and step-up hours, over 106 | Medium |
-| Does **FD (driver diff)** pay the same way as officer-rank step-up (F3/F4), or differently? | A step-up stub specifically for a driver-covering assignment | Low |
+| **Anniversary/step-progression raise — split mid-period or start next period?** Now a near-universal case under civil service (personal hire/promotion dates), not a rare shared-date edge case. | Any period containing a member's step-progression date | High |
+| **Is "top-out bonus" a real, currently active benefit at all?** Neither official pay plan document mentions it. The field may be vestigial — carried into the FY27 workbook from an old CBA provision that no longer applies, rather than a live formula bug. | Ask the coworker directly whether top-out bonus still exists under the current plan | High (but now: a question, not a repro) |
+| Does the **step-up blended rate** match payroll's, now that step-up is confirmed as Step 0 of the covered rank? | A period mixing regular and step-up hours, over 106 | Medium |
 
 **Resolved, this round:** any worked hours (regular OT or holiday-worked) can be
 diverted to comp instead of cash. For check-verification purposes the *rate* at
