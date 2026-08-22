@@ -33,6 +33,11 @@ Four properties drive every decision:
 
 "48/96" is a placeholder name.
 
+**Not a PTO/comp bank system.** HR already tracks running balances for vacation,
+sick, comp, and holiday-accrued time — the app doesn't need to replicate that
+ledger. It only needs to know, per block of hours, whether it's paid out *this*
+check or banked instead; it doesn't track how much is left in any bank.
+
 ## 2. The two-year problem
 
 FY26 (supplied later) ships as the live year so people can check real checks
@@ -109,6 +114,11 @@ The importer extracts holiday *dates* rather than trusting the sheet's hand-wire
 per-shift holiday formulas, then prints a table for human confirmation against the
 department calendar. One deliberate human check per year.
 
+**Import signal:** the purple-filled calendar cells mark holiday dates directly —
+a far more reliable source than parsing the bespoke, inconsistent per-row IF
+formulas (see Appendix defect #2/#3). The importer should read fill color first
+and treat the formulas as a cross-check, not the source of truth.
+
 ## 5. Verification — two ladders
 
 ### Rung one: parity with the sheet
@@ -134,14 +144,25 @@ Volume matters more than perfection; a handful of stubs can't distinguish these.
 
 ### What each stub settles
 
+**Resolved**, from real checks and direct confirmation from a department member:
+
+| Question | Resolution | Source |
+|---|---|---|
+| Does the core rate/OT/FLSA formula match a real check? | Yes, to the penny, using the member's HR-confirmed rate ($38.4208/hr adjusted, $284 longevity) | A filled real period: $4,418.68 predicted and actual |
+| Does **holiday worked** pay at 1.5× the *effective* rate (base + incentive), or base only? | Effective rate — confirmed exactly (36 hrs × 1.5 × $38.2146 = $2,063.58) | 12/20 real check |
+| Does **PTO** stay out of the 106-hr OT count? | Yes — confirmed directly | Member's own explanation of FLSA cap reset rules |
+| Do **holiday-worked hours** also stay out of the 106-hr count (same as PTO)? | Yes — resolves the 12/20 check's $0 FLSA premium, which the sheet's formula (as written) would not have predicted | Member's explanation + matches the 12/20 check exactly |
+| Does **step-up** mean a flat rank-based rate (F2/F3/F4), or a % bump? | Flat rank rate — the member's HR base rate ($35.3302) matches `F2` in the FY27 sheet exactly | HR pay-rate screenshot |
+
+**Still open:**
+
 | Open question | Stub that answers it | Priority |
 |---|---|---|
 | Is the **top-out bonus** in the FLSA regular rate? Sheet has the field, no formula reads it. | A period with OT while a top-out bonus was on file | High |
 | **Anniversary raise** — split mid-period or start next period? | The period containing the anniversary date | High |
-| Is **longevity** really folded in at ÷2912? | A period with OT while drawing longevity | High |
-| Does **PTO** stay out of the OT count? | A period over 106 hrs including vacation or sick | Medium |
-| Does the **step-up blended rate** match payroll's? | A period mixing regular and step-up hours, over 106 | Medium |
-| **Holiday worked** at exactly 12 hrs — sheet returns 0 on one row | Any stub with partial holiday hours worked | Low |
+| When **holiday worked**, is the 1.5× always paid as cash, or can it also be banked as comp (like holiday-observed can be banked as accrued)? | A stub or sheet example where a holiday was worked *and* comped rather than paid | High |
+| Does the **step-up blended rate** match payroll's, now that step-up is confirmed as a flat rank rate rather than a % bump? | A period mixing regular and step-up hours, over 106 | Medium |
+| Does **FD (driver diff)** pay the same way as officer-rank step-up (F3/F4), or differently? | A step-up stub specifically for a driver-covering assignment | Low |
 
 ## 6. Paystub handling
 
@@ -288,6 +309,55 @@ hours worked.
 
 Correct in the sheet and worth preserving: PTO is paid but excluded from the FLSA
 OT count, and the incentive is folded into the regular rate before OT is figured.
+Confirmed directly by a department member: **holiday-worked hours are excluded
+from the 106-hr count the same way PTO is** — neither one helps you reach the cap,
+and both explain checks where a big period total still shows zero FLSA premium.
+
+### Two different things both get called "OT"
+
+The single biggest source of confusion in this project so far, worth building the
+UI around explicitly:
+
+- **Extra hours worked** — anything beyond your normal schedule for the period.
+  Paid at straight time (or banked as comp), no special formula.
+- **FLSA premium hours** — the subset of *total* worked hours that push the
+  period past the 106-hr cap. Only these get the extra 0.5× kicker.
+
+A member can work 16 "extra" hours and have the app correctly show only 6 as
+`OT Hours`, because the other 10 just filled the gap up to 106. That's not a bug —
+verified to the penny against a real check — but it reads as wrong at a glance
+unless both numbers are shown with plain labels ("16 hrs worked beyond schedule →
+6 hrs earned the OT premium").
+
+### Hour-block types (pay codes)
+
+The engine's real unit of input isn't "hours worked" — it's a typed block of
+hours, matching what actually appears on a paystub rather than the sheet's
+simplified HO/HW/PTO columns:
+
+| Type | Counts toward 106-hr cap? | Payout |
+|---|---|---|
+| Regular worked | Yes | Straight time (+ FLSA premium on hours past 106) |
+| Holiday worked | **No** | 1.5× — cash or banked as comp (open question, see §5) |
+| Holiday observed (not worked) | No | 12 hrs straight — member's choice: cash now, or accrue to use later |
+| PTO taken (vacation / sick / comp) | No | Straight time, paid |
+| Step-up / acting pay | Yes | Rank-based flat rate (F2/F3/F4), blended into the FLSA rate when mixed with regular hours |
+| TIFMAS deployment | Yes (confirm) | Own premium structure, TBD from a TIFMAS stub |
+
+**The holiday rule, as explained directly:** `HO`/`HW` auto-populate from the
+shift schedule intersected with the holiday calendar (purple cells in the
+sheet). From there:
+
+- **Worked the holiday** → OT rate (1.5×) for those hours.
+- **Didn't work, take cash** → 12 hrs straight time added to the check.
+- **Didn't work, don't need the cash** → accrue the 12 hrs to use later.
+
+The app should let a member log every hour worked — including comped or accrued
+ones — rather than hide them by fudging the entered hours (the failure mode the
+sheet has today: typing `16` instead of `24` to informally account for 8 comped
+hours leaves no record those hours ever happened). Recording the destination
+(cash / comp / accrue) per block is what keeps the gross-pay math auditable
+without needing to track running bank balances.
 
 ### Known defects in the source workbook
 
@@ -303,3 +373,25 @@ OT count, and the incentive is folded into the regular rate before OT is figured
 5. **Holiday rows are hand-wired** per shift per holiday (rows 17, 23, 29, 41, 57,
    65, 77), each with bespoke formulas against specific day columns. Correct as
    built for FY27; the most fragile part for next year's rebuild.
+6. **FY26's holiday-pay formulas use the base rate only, not the effective
+   (base + incentive) rate**, for both `HO` and the `×1.5` portion of `HW`. A
+   real check contradicts this: 12/20's holiday-worked pay matches
+   `hours × 1.5 × effective_rate` exactly, not base-only. FY26's own formula
+   looks wrong here, independent of anything carried over from FY27.
+7. **FY26's step-up rate is `base × 1.04`** (Step-up tab), a flat 4% bump. This
+   doesn't match a real check either — a department member's HR base rate
+   ($35.3302) is identical to FY27's `F2` step-up rate, meaning step-up is a
+   flat rank-based rate, not a percentage. FY26's formula is likely a rough
+   placeholder rather than the actual rule.
+
+### FY26 vs FY27 — structural differences
+
+FY26 predates two FY27 additions: it has no anniversary-date field and no
+top-out-bonus field at all (so top-out being "dead" in FY27 is a half-finished
+addition, not a regression). Where FY27 auto-switches pay rate at an individual's
+anniversary, FY26 instead has a single cell (`R1`, "FY 26 pay change") and a
+manual note on one affected period — suggesting FY26's raise was a single
+department-wide date rather than per-person, which is simpler for the importer to
+encode. FY26 also has an inconsistent longevity divisor (`2756` on the first
+period's formula, `2912` everywhere else in the same sheet) — a distinct bug from
+anything found in FY27.
