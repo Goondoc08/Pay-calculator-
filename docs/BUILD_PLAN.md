@@ -74,8 +74,7 @@ engine produced it and a test covers it.
   "effectiveTo":   "2027-09-24",
 
   "periodLengthDays": 14,
-  "flsaThresholdHours": 106,     // 7(k) fire, 14-day
-  "longevityDivisor": 2912,
+  "flsaThresholdHours": 106,     // 7(k) fire, 14-day; confirmed at the source
 
   "shifts": {
     "A": { "cycleAnchor": "2026-09-27", "pattern": [24,24,0,0,0,0] },
@@ -107,15 +106,16 @@ engine produced it and a test covers it.
     "F4": [48.8773, 50.3436, 51.8539, 53.4095]
   },
 
-  "raise": { "pct": 3.0, "trigger": "anniversary", "proration": "TBD" }
+  "raise": { "trigger": "stepDate", "proration": "split" }
 }
 ```
 
-`raise.proration` is the one field that can't be filled in yet. The sheet applies
-the 3% to an entire pay period based on that period's *start* date, so a period
-straddling the anniversary pays the new rate on all 120 hours. Real payroll
-usually splits the period or starts the raise the following period. A paystub
-from the period containing the anniversary settles it.
+`raise.proration: "split"` is confirmed, not guessed: a period spanning a
+member's step date pays part at the old rate, part at the new one — not the
+whole period at one rate (as the sheet does today) and not deferred to the next
+period. The old flat `pct: 3.0` guess is dropped in favor of a real lookup: the
+new rate is whatever the official pay plan says is the next step in the
+member's grade (`docs/PAY_PLAN.md`), not a percentage.
 
 **This matters more than it used to.** The department is moving to civil
 service: step progression now lands on each member's own hire or promotion date
@@ -174,12 +174,17 @@ Volume matters more than perfection; a handful of stubs can't distinguish these.
 | Comp-banking rate for OT/holiday-worked | Irrelevant to check verification — see prior resolution below | Member's explanation |
 | Is the **106-hr FLSA threshold** correct? | Confirmed at the source, not just inferred: "Fire Ops 2912 Personnel are assigned to a 14/106 FLSA work period." | Official pay plan |
 
+Also resolved, this round: **top-out bonus and longevity are both paid on their
+own separate checks**, not blended into regular biweekly pay. Both drop out of
+scope for this app entirely — no engine work, no Setup input needed for either.
+And **mid-period step raises split the period at the step date** (confirmed
+directly), not whole-period or deferred — a real engine requirement, not just a
+data question. See `docs/PAY_PLAN.md` for the full writeup of both.
+
 **Still open:**
 
 | Open question | Stub that answers it | Priority |
 |---|---|---|
-| **Anniversary/step-progression raise — split mid-period or start next period?** Now a near-universal case under civil service (personal hire/promotion dates), not a rare shared-date edge case. | Any period containing a member's step-progression date | High |
-| **Is "top-out bonus" a real, currently active benefit at all?** Neither official pay plan document mentions it. The field may be vestigial — carried into the FY27 workbook from an old CBA provision that no longer applies, rather than a live formula bug. | Ask the coworker directly whether top-out bonus still exists under the current plan | High (but now: a question, not a repro) |
 | Does the **step-up blended rate** match payroll's, now that step-up is confirmed as Step 0 of the covered rank? | A period mixing regular and step-up hours, over 106 | Medium |
 
 **Resolved, this round:** any worked hours (regular OT or holiday-worked) can be
@@ -195,7 +200,9 @@ full stop, regardless of the internal banking multiplier.
 routing numbers, YTD block if preferred. None of it is needed.
 
 **What the harness needs:** pay period start/end dates, each pay code with hours,
-rate, and amount, and the member's rate/certs/longevity as of that period.
+rate, and amount, and the member's rate/certs as of that period. (Longevity and
+top-out aren't needed — both are paid on separate checks, out of scope for this
+tool.)
 
 **Where it lives:** raw stub files are excluded from git via `.gitignore`.
 Committed fixtures carry numbers only — no names, no IDs, shift letters swapped
@@ -228,14 +235,15 @@ file fails loudly. Build `npm run import-year -- FY27.xlsx`. Emit and hand-verif
 Pure functions, no UI, no side effects:
 
 - `buildSchedule(year, shift)` — 48/96 rotation expanded to real dates
-- `effectiveRate(profile, date)` — base + incentives, anniversary raise applied
-- `computePeriod(...)` — straight, holiday off, holiday worked, OT hours, FLSA premium, gross
-- `computeStepUp(...)` — weighted regular rate for mixed regular / step-up / TIFMAS
+- `effectiveRate(profile, date)` — base + incentives at a given date; the primitive `computePeriod` calls per-day to realize a split-rate period
+- `computePeriod(...)` — straight, holiday off, holiday worked, OT hours, FLSA premium, gross; **splits at a step-date boundary if one falls inside the period**, pricing each side separately
+- `computeStepUp(...)` — step-up hours priced at Step 0 of the covered grade (`docs/PAY_PLAN.md`), blended into the FLSA rate when mixed with regular hours
 
 Every function returns labeled line items with the inputs used, not just a total.
 
 > **Gate:** full branch coverage including zero-hour periods, PTO exceeding the
-> threshold, and a period straddling the anniversary.
+> threshold, and a period with a mid-period step-date split (first-class case,
+> not an edge case — see `docs/PAY_PLAN.md`).
 
 ### 03 — Sheet-parity harness (~½ session)
 Extract the workbook's computed values for 26 periods × 3 shifts, assert to the
@@ -253,7 +261,7 @@ behavior when storage is blocked or full.
 
 ### 05 — Interface (~2–3 sessions)
 
-- **Setup** (once) — shift letter, hourly rate, cert pickers that compute the incentive rate, longevity, top-out, anniversary date
+- **Setup** (once) — shift letter, hourly rate, cert pickers that compute the incentive rate, step date (for split-period raises). No longevity or top-out inputs — both are paid on separate checks, out of scope
 - **This period** (home) — 24s pre-filled from the deterministic rotation; only exceptions get touched (PTO by type, trade, OT shift, holiday worked). Gross at bottom, itemized on tap
 - **Year** — 26 periods, running total, year picker for closed years
 - **Step-up & TIFMAS** — entered as pay codes on the period screen so the blended FLSA rate happens automatically
@@ -328,9 +336,9 @@ hours worked.
 | Straight pay | `total_hrs × eff_rate` (PTO included) |
 | Holiday off (HO) | `HO_hrs × eff_rate` |
 | Holiday worked (HW) | `HW_hrs × eff_rate × 1.5` |
-| OT hours | `max(0, total_hrs − PTO − 106)` |
-| FLSA premium | `OT × 0.5 × eff_rate + (longevity ÷ 2912 × OT × 0.5)` |
-| Anniversary raise | after anniversary date, rate becomes `hourly × 1.03` |
+| OT hours | `max(0, total_hrs − PTO − 106)` (holiday-worked hours also excluded, confirmed directly) |
+| FLSA premium | `OT × 0.5 × eff_rate` — **no longevity term.** The sheets' `+ longevity/2912 × OT × 0.5` doesn't reflect real pay: longevity is paid on its own separate check, confirmed directly, and doesn't belong in this formula at all. |
+| Step/anniversary raise | rate changes at the member's own step date; a period spanning that date pays **split rates** — hours before at the old rate, hours at/after at the new rate (confirmed directly, not a whole-period or next-period switch) |
 
 Correct in the sheet and worth preserving: PTO is paid but excluded from the FLSA
 OT count, and the incentive is folded into the regular rate before OT is figured.

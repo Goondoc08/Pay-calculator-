@@ -70,10 +70,19 @@ grade.
 ### Longevity
 
 **"$4 a month for each year of service."** This is the underlying accrual rule
-behind the `Last Longevity` figure the sheets ask for directly — it explains
-where that number comes from, though the app still takes it as a direct input
-(see the app's payoff-based model below) rather than computing it from hire date
-in v1.
+behind the `Last Longevity` figure the sheets ask for — but **longevity is paid
+out on its own separate check, not blended into regular biweekly pay.** Same
+scope call as top-out bonus below: out of scope for this app. The workbooks'
+FLSA-premium longevity term (`+ longevity/2912 × OT × 0.5`) doesn't reflect how
+this is actually paid and should be dropped from the engine, not ported. The
+Setup screen doesn't need a longevity input at all.
+
+### Top-out bonus
+
+**Confirmed to still exist, but — like longevity — paid out on its own separate
+check.** Resolves the earlier open question (it isn't a formula bug so much as a
+field that was never going to be reachable from the regular-check math in the
+first place). Out of scope for this app; no engine work needed.
 
 ### FLSA & overtime
 
@@ -115,11 +124,21 @@ moment they'd notice it on a real check. Capturing the official tables now means
 a v2 "track my step automatically" feature is a data lookup away, without
 redesigning anything.
 
-**The mid-period proration question is still open, and now matters more** — it
-used to be a rare edge case (one shared anniversary date for everyone); under
-civil service it's a personal event for nearly everyone, so getting the
-proration right (split the period vs. apply next period) affects a lot more
-checks than originally scoped for.
+**Mid-period proration — resolved: pay periods can carry split rates.**
+Confirmed directly: "the step change will occur on the date so your pay period
+could have split pay rates." Not whole-period, not deferred to the next period —
+a period spanning a step date pays part at the old rate and part at the new one.
+This is now a near-universal case under civil service (personal hire/promotion
+dates), not a rare shared-date edge case, so getting the split right matters for
+a lot of checks.
+
+This is a real engine requirement, not just a data question: `computePeriod`
+can't treat a period's rate as one constant — it needs to split the period's
+hours at the step-date boundary and price each side separately. The `raise`
+field in the year file (or its v2 replacement) needs to carry an effective date
+precise enough to do that split, and a period-level test with a mid-period step
+change belongs in the Phase 02 test suite as a first-class case, not an edge
+case.
 
 ## FY27 proposed pay plan
 
