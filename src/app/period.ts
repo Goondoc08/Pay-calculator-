@@ -63,14 +63,6 @@ export interface DayEntry {
    * never the straight-time pay underneath it.
    */
   holidayWorkedAccrued: boolean;
-  /**
-   * Meaningful only when isHoliday and the entitlement isn't fully worked
-   * (worked < 12). Per policy 501.1.1(C): "Holiday Accrued" (HA) is offered
-   * "in lieu of holiday observed pay" — so the unworked remainder of the
-   * entitlement is independently bankable too, separate from whether the
-   * worked portion (if any) was also banked.
-   */
-  holidayObservedAccrued: boolean;
 }
 
 function datesInPeriod(period: Period): string[] {
@@ -120,7 +112,6 @@ function defaultEntry(
       grade: defaultStepUpGrade,
       holidayHoursWorked: scheduledHours,
       holidayWorkedAccrued: false,
-      holidayObservedAccrued: false,
     };
   }
   if (scheduledHours > 0) {
@@ -133,7 +124,6 @@ function defaultEntry(
       grade: defaultStepUpGrade,
       holidayHoursWorked: 0,
       holidayWorkedAccrued: false,
-      holidayObservedAccrued: false,
     };
   }
   return {
@@ -145,7 +135,6 @@ function defaultEntry(
     grade: defaultStepUpGrade,
     holidayHoursWorked: 0,
     holidayWorkedAccrued: false,
-    holidayObservedAccrued: false,
   };
 }
 
@@ -204,15 +193,16 @@ export function entriesToBlocks(entries: DayEntry[]): HourBlock[] {
         });
       }
 
-      // HO: the unworked remainder of the entitlement. Independently
-      // bankable as HA, regardless of whether the worked portion was banked.
+      // HO: the unworked remainder of the entitlement. Never bankable —
+      // confirmed directly: unlike the worked side's HWA option, holiday
+      // observed always pays cash.
       const leftover = Math.max(0, HOLIDAY_ENTITLEMENT_HOURS - worked);
       if (leftover > 0) {
         blocks.push({
           date: entry.date,
           type: "holidayObserved",
           hours: leftover,
-          destination: entry.holidayObservedAccrued ? "accrue" : "cash",
+          destination: "cash",
         });
       }
       continue;
@@ -265,12 +255,10 @@ export function blocksToEntries(
       // hours past 12.
       const workedBlock = dayBlocks.find((b) => b.type === "regular");
       const hwBlock = dayBlocks.find((b) => b.type === "holidayWorked");
-      const hoBlock = dayBlocks.find((b) => b.type === "holidayObserved");
       return {
         ...entry,
         holidayHoursWorked: workedBlock?.hours ?? 0,
         holidayWorkedAccrued: hwBlock?.destination === "accrue",
-        holidayObservedAccrued: hoBlock?.destination === "accrue",
       };
     }
 

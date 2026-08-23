@@ -246,15 +246,13 @@ describe("entriesToBlocks / blocksToEntries round-trip", () => {
     expect(roundTripped).toEqual(entries);
   });
 
-  it("banks the HO leftover as HA independently of whether HW was worked", () => {
-    // Per city policy 501.1.1(C): HA is offered "in lieu of holiday
-    // observed pay" — a separate election from HWA, and available even on
-    // a fully-unworked holiday.
+  it("holiday observed can never be banked, even when the day is fully unworked", () => {
+    // Confirmed directly: unlike HWA on the worked side, HO has no accrue
+    // option at all — the field doesn't exist on DayEntry, so there's
+    // nothing to set. This just locks the always-cash behavior in.
     const period = year.periods[4];
     const entries = defaultDayEntries(year, "A", period).map((e) =>
-      e.date === "2026-11-26"
-        ? { ...e, holidayHoursWorked: 0, holidayObservedAccrued: true }
-        : e,
+      e.date === "2026-11-26" ? { ...e, holidayHoursWorked: 0 } : e,
     );
     const blocks = entriesToBlocks(entries);
     const thanksgivingBlocks = blocks.filter((b) => b.date === "2026-11-26");
@@ -263,22 +261,16 @@ describe("entriesToBlocks / blocksToEntries round-trip", () => {
         date: "2026-11-26",
         type: "holidayObserved",
         hours: 12,
-        destination: "accrue",
+        destination: "cash",
       },
     ]);
-    expect(computePeriod(year, flatProfile, thanksgivingBlocks).gross).toBe(0);
   });
 
-  it("HWA and HA are independent — a partial holdover can bank one and cash the other", () => {
+  it("HWA banks only the worked premium — the unworked HO remainder always stays cash", () => {
     const period = year.periods[4];
     const entries = defaultDayEntries(year, "A", period).map((e) =>
       e.date === "2026-11-26"
-        ? {
-            ...e,
-            holidayHoursWorked: 2,
-            holidayWorkedAccrued: true,
-            holidayObservedAccrued: false,
-          }
+        ? { ...e, holidayHoursWorked: 2, holidayWorkedAccrued: true }
         : e,
     );
     const blocks = entriesToBlocks(entries);

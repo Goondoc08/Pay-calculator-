@@ -99,9 +99,8 @@ function DayCell({
             <span>—</span>
           )}
         </p>
-        {/* HWA (bank the worked premium) and HA (bank the unworked
-            remainder) are independent per city policy 501.1.1(C)/(G) — RG
-            itself is never bankable, always cash. */}
+        {/* HWA banks just the 1.5x premium (RG always still pays cash).
+            HO never has an accrue option — confirmed directly. */}
         {hw > 0 && (
           <label className="flex items-center gap-0.5 text-[9px] leading-tight text-slate-400">
             <input
@@ -115,21 +114,6 @@ function DayCell({
               }
             />
             HW accrue
-          </label>
-        )}
-        {leftover > 0 && (
-          <label className="flex items-center gap-0.5 text-[9px] leading-tight text-slate-400">
-            <input
-              type="checkbox"
-              checked={entry.holidayObservedAccrued}
-              onChange={(e) =>
-                onChange({
-                  ...entry,
-                  holidayObservedAccrued: e.target.checked,
-                })
-              }
-            />
-            HO accrue
           </label>
         )}
       </div>
