@@ -1,7 +1,9 @@
+import fy26Raw from "../data/fy26.json";
 import fy27Raw from "../data/fy27.json";
 import { parsePayYear, type PayYear } from "../data/schema";
 
 const YEAR_FILES: Record<string, unknown> = {
+  FY26: fy26Raw,
   FY27: fy27Raw,
 };
 

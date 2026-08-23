@@ -1,6 +1,12 @@
 export type ShiftLetter = "A" | "B" | "C";
-/** F1 (Fire Fighter) .. F4 (post-merger Battalion Chief) — see docs/PAY_PLAN.md. */
-export type PayGrade = "F1" | "F2" | "F3" | "F4";
+/**
+ * F1 (Fire Fighter) .. F4/F5 (Battalion Chief) — see docs/PAY_PLAN.md.
+ * FY26 has 5 grades; FY27's proposed Lieutenant/Captain merger drops it to
+ * 4, so F4 means different things depending on the active year — always
+ * read grade labels from the year file's own payPlan keys, never assume
+ * a fixed 4-grade structure.
+ */
+export type PayGrade = "F1" | "F2" | "F3" | "F4" | "F5";
 
 /** Where a block of hours is paid out: cash on this check, or banked (comp/accrue). */
 export type Destination = "cash" | "comp" | "accrue";

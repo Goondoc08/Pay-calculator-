@@ -136,7 +136,8 @@ async function extractShift(
   const holidayCells: DayCell[] = [];
 
   let n = 0;
-  for (let r = 5; r <= 82; r += 1) {
+  const maxRow = Math.max(ws.rowCount, 5);
+  for (let r = 5; r <= maxRow; r += 1) {
     const row1 = ws.getRow(r);
     const date1 = excelDateToIso(row1.getCell(COL.date).value);
     if (!date1) continue;
@@ -294,11 +295,66 @@ function guessHolidayName(iso: string): string {
   return "UNCONFIRMED HOLIDAY — name not inferred, check department calendar";
 }
 
+// Official pay plan tables, docs/PAY_PLAN.md — index 0 = Step 0. FY26 still
+// has 5 grades (F1 Fire Fighter .. F5 Battalion Chief); FY27's proposed
+// merger of Lieutenant/Captain drops it to 4 (F1..F4).
+const PAY_PLANS: Record<string, Record<string, number[]>> = {
+  FY26: {
+    F1: [
+      25.2779, 26.0362, 26.8173, 27.6218, 28.4505, 29.304, 30.1831, 31.0886,
+      32.0213,
+    ],
+    F2: [33.3021, 34.3012, 35.3302, 36.3901],
+    F3: [37.8458, 38.9811, 40.1506, 41.3551],
+    F4: [43.0093, 44.2996, 45.6285, 46.9974],
+    F5: [48.8773, 50.3436, 51.8539, 53.4095],
+  },
+  FY27: {
+    F1: [
+      26.8173, 27.6218, 28.4505, 29.304, 30.1831, 31.0886, 32.0213, 32.9819,
+      33.9714,
+    ],
+    F2: [35.3302, 36.3901, 37.4818, 38.6063, 39.7644],
+    F3: [41.7566, 43.0093, 44.2996, 45.6286, 46.9974],
+    F4: [48.8773, 50.3436, 51.8539, 53.4095],
+  },
+};
+
+// Matches both workbooks' Incentives tabs (docs/PAY_PLAN.md) — FY26's sheet
+// also shows a transitional "EMT-P(FY25)" rate of 1.855, superseded by the
+// department-wide raise mid-year; this is the current/final rate for both.
+const INCENTIVES = {
+  tcfp: { Intermediate: 0.2061, Advanced: 0.4121, Master: 0.6181 },
+  education: {
+    Associate: 0.4121,
+    Bachelor: 0.6181,
+    Master: 0.8242,
+    PhD: 1.0302,
+  },
+  emt: { AEMT: 0.625, Paramedic: 2.0604 },
+  bilingual: 0.3091,
+  assignment: { "Inspector/Investigator": 0.2232, "QA/QI": 1.1 },
+};
+
 async function main() {
-  const [, , workbookPath, yearId] = process.argv;
+  const [, , workbookPath, yearId, effectiveToExclusive] = process.argv;
   if (!workbookPath || !yearId) {
     console.error(
-      "Usage: npm run import-year -- <path-to-workbook.xlsx> <fiscal-year-id>",
+      "Usage: npm run import-year -- <path-to-workbook.xlsx> <fiscal-year-id> [effective-to-exclusive]",
+    );
+    console.error(
+      "  effective-to-exclusive: drop periods starting on/after this date —",
+    );
+    console.error(
+      "  for a workbook whose calendar runs past where the next year takes over.",
+    );
+    process.exit(1);
+  }
+
+  const payPlan = PAY_PLANS[yearId];
+  if (!payPlan) {
+    console.error(
+      `No pay plan table for ${yearId} — add one to PAY_PLANS in this script (docs/PAY_PLAN.md).`,
     );
     process.exit(1);
   }
@@ -311,6 +367,22 @@ async function main() {
     "B-Shift": await extractShift(workbook, "B-Shift"),
     "C-Shift": await extractShift(workbook, "C-Shift"),
   };
+
+  // Some workbooks' own calendars run past where the next fiscal year takes
+  // over (e.g. FY26's ships periods through 2026-10-09, but FY27 already
+  // owns 2026-09-26 onward) — trim those trailing periods so consecutive
+  // years don't overlap.
+  if (effectiveToExclusive) {
+    for (const tab of SHIFT_TABS) {
+      const extract = shiftData[tab];
+      extract.periods = extract.periods.filter(
+        (p) => p.start < effectiveToExclusive,
+      );
+      extract.holidayCells = extract.holidayCells.filter(
+        (c) => c.date < effectiveToExclusive,
+      );
+    }
+  }
 
   const anyShift = shiftData["A-Shift"];
   const fyStart = anyShift.periods[0].start;
@@ -374,27 +446,8 @@ async function main() {
       end: p.end,
     })),
     holidays,
-    incentives: {
-      tcfp: { Intermediate: 0.2061, Advanced: 0.4121, Master: 0.6181 },
-      education: {
-        Associate: 0.4121,
-        Bachelor: 0.6181,
-        Master: 0.8242,
-        PhD: 1.0302,
-      },
-      emt: { AEMT: 0.625, Paramedic: 2.0604 },
-      bilingual: 0.3091,
-      assignment: { "Inspector/Investigator": 0.2232, "QA/QI": 1.1 },
-    },
-    payPlan: {
-      F1: [
-        26.8173, 27.6218, 28.4505, 29.304, 30.1831, 31.0886, 32.0213, 32.9819,
-        33.9714,
-      ],
-      F2: [35.3302, 36.3901, 37.4818, 38.6063, 39.7644],
-      F3: [41.7566, 43.0093, 44.2996, 45.6286, 46.9974],
-      F4: [48.8773, 50.3436, 51.8539, 53.4095],
-    },
+    incentives: INCENTIVES,
+    payPlan,
     raise: { trigger: "stepDate", proration: "split" },
   };
 

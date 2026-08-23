@@ -3,7 +3,7 @@ import { z } from "zod";
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "expected YYYY-MM-DD");
 const shiftLetter = z.enum(["A", "B", "C"]);
 const destination = z.enum(["cash", "comp", "accrue"]);
-const payGrade = z.enum(["F1", "F2", "F3", "F4"]);
+const payGrade = z.enum(["F1", "F2", "F3", "F4", "F5"]);
 
 const rateSegmentSchema = z.object({
   effectiveFrom: isoDate,

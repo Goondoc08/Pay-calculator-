@@ -30,9 +30,11 @@ function weekdayName(iso: string): string {
 
 function DayRow({
   entry,
+  stepUpGrades,
   onChange,
 }: {
   entry: DayEntry;
+  stepUpGrades: PayGrade[];
   onChange: (next: DayEntry) => void;
 }) {
   return (
@@ -113,9 +115,11 @@ function DayRow({
               onChange({ ...entry, grade: e.target.value as PayGrade })
             }
           >
-            <option value="F2">F2</option>
-            <option value="F3">F3</option>
-            <option value="F4">F4</option>
+            {stepUpGrades.map((g) => (
+              <option key={g} value={g}>
+                {g}
+              </option>
+            ))}
           </select>
         )}
       </div>
@@ -246,6 +250,12 @@ export function PeriodScreen({
   const blocks = entriesToBlocks(entries);
   const result = computePeriod(year, profile, blocks);
   const aggregated = aggregateLineItems(result.lineItems);
+  // F1 is never a step-up target (it's the base grade); every grade above
+  // it is a valid ride-up, and the set varies by year (FY26 has F1..F5,
+  // FY27's proposed merger drops it to F1..F4).
+  const stepUpGrades = (Object.keys(year.payPlan) as PayGrade[]).filter(
+    (g) => g !== "F1",
+  );
 
   return (
     <div className="flex flex-col gap-4 p-4 pb-28 text-slate-100">
@@ -279,6 +289,7 @@ export function PeriodScreen({
           <DayRow
             key={entry.date}
             entry={entry}
+            stepUpGrades={stepUpGrades}
             onChange={(next) => updateEntry(i, next)}
           />
         ))}
