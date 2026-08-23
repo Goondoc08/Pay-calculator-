@@ -76,9 +76,18 @@ export function SetupScreen({
 
   const [shift, setShift] = useState<ShiftLetter>(profile?.shift ?? "A");
   const [grade, setGrade] = useState<PayGrade>(progression?.grade ?? grades[0]);
-  const [hourlyRate, setHourlyRate] = useState(
-    firstSegment ? String(firstSegment.hourlyRate) : "",
+
+  // The pay plan table is the single source of truth for what a step pays
+  // (docs/PAY_PLAN.md) — members know their step off-hand, not their HR
+  // hourly rate to four decimal places, so Setup asks for the step and
+  // looks the rate up rather than asking someone to type or remember it.
+  // On an existing profile, seed the picker from whichever step its saved
+  // rate is closest to; a rate the current table doesn't cover at all
+  // (old data, a since-changed table) falls back to Step 0.
+  const [stepIndex, setStepIndex] = useState(() =>
+    firstSegment ? (matchStep(year, grade, firstSegment.hourlyRate) ?? 0) : 0,
   );
+
   const [tcfp, setTcfp] = useState(NONE);
   const [education, setEducation] = useState(NONE);
   const [emt, setEmt] = useState(NONE);
@@ -104,27 +113,31 @@ export function SetupScreen({
     assignment,
   });
 
-  const parsedRate = Number(hourlyRate);
-  const rateValid = hourlyRate.trim() !== "" && Number.isFinite(parsedRate);
-  const canSave = rateValid;
+  const stepTable = year.payPlan[grade] ?? [];
+  const currentRate = stepTable[stepIndex] ?? 0;
+  const canSave = stepTable.length > 0;
 
-  const stepMatch = useMemo(
-    () => (rateValid ? matchStep(year, grade, parsedRate) : null),
-    [year, grade, parsedRate, rateValid],
-  );
+  function handleGradeChange(nextGrade: PayGrade) {
+    setGrade(nextGrade);
+    // A step index that's meaningless for the new grade's (possibly
+    // shorter) table would otherwise silently clamp to its last entry —
+    // reset to Step 0 instead of guessing which step "carries over".
+    const nextTable = year.payPlan[nextGrade] ?? [];
+    if (stepIndex >= nextTable.length) setStepIndex(0);
+  }
 
   const upcomingStep = useMemo(
     () =>
-      rateValid && anniversaryDate
+      anniversaryDate
         ? computeUpcomingStep(
             year,
             grade,
-            parsedRate,
+            stepIndex,
             anniversaryDate,
             todayIso(),
           )
         : null,
-    [year, grade, parsedRate, anniversaryDate, rateValid],
+    [year, grade, stepIndex, anniversaryDate],
   );
 
   function handleSave() {
@@ -134,7 +147,7 @@ export function SetupScreen({
       rateSegments: [
         {
           effectiveFrom: year.effectiveFrom,
-          hourlyRate: parsedRate,
+          hourlyRate: currentRate,
           incentiveTotal: incentives,
         },
         ...(upcomingStep && receivingStep
@@ -165,8 +178,7 @@ export function SetupScreen({
       <div>
         <h1 className="text-xl font-semibold">Setup</h1>
         <p className="mt-1 text-sm text-ink-muted">
-          One-time setup. Update your rate here again whenever you get a step or
-          a raise.
+          One-time setup. Come back here whenever your step changes.
         </p>
       </div>
 
@@ -184,22 +196,19 @@ export function SetupScreen({
       <Select
         label="Rank / grade"
         value={grade}
-        onChange={(v) => setGrade(v as PayGrade)}
+        onChange={(v) => handleGradeChange(v as PayGrade)}
         options={grades.map((g) => ({ value: g, label: GRADE_LABELS[g] ?? g }))}
       />
 
-      <label className="flex flex-col gap-1 text-sm text-ink-muted">
-        Hourly rate
-        <input
-          className="rounded-md border border-line bg-surface px-3 py-2 text-ink"
-          type="number"
-          step="0.0001"
-          inputMode="decimal"
-          value={hourlyRate}
-          onChange={(e) => setHourlyRate(e.target.value)}
-          placeholder="26.8173"
-        />
-      </label>
+      <Select
+        label="Step"
+        value={String(stepIndex)}
+        onChange={(v) => setStepIndex(Number(v))}
+        options={stepTable.map((rate, i) => ({
+          value: String(i),
+          label: `Step ${i} — $${rate.toFixed(4)}/hr`,
+        }))}
+      />
 
       <label className="flex flex-col gap-1 text-sm text-ink-muted">
         Last longevity payoff (LP)
@@ -280,6 +289,12 @@ export function SetupScreen({
           Incentive total:{" "}
           <span className="text-ink">${incentives.toFixed(4)}/hr</span>
         </p>
+        <p className="text-sm text-ink-muted">
+          Base + incentives:{" "}
+          <span className="text-ink">
+            ${(currentRate + incentives).toFixed(4)}/hr
+          </span>
+        </p>
       </div>
 
       <div className="flex flex-col gap-3 rounded-lg border border-line p-3">
@@ -294,29 +309,14 @@ export function SetupScreen({
           />
         </label>
 
-        {rateValid && !stepMatch && (
-          <p className="text-sm text-warn">
-            That rate doesn't match a published step for{" "}
-            {GRADE_LABELS[grade] ?? grade} — step projection isn't available,
-            but your rate is still used as entered.
-          </p>
-        )}
-
-        {stepMatch && (
-          <p className="text-sm text-ink-muted">
-            That's Step {stepMatch.stepIndex} of {GRADE_LABELS[grade] ?? grade}
-            {stepMatch.approximate && " (closest match)"}.
-          </p>
-        )}
-
-        {stepMatch && !upcomingStep && anniversaryDate && (
+        {!upcomingStep && anniversaryDate && (
           <p className="text-sm text-ink-muted">
             You're already at the top step of this grade — no further step to
             project.
           </p>
         )}
 
-        {stepMatch && !anniversaryDate && (
+        {!anniversaryDate && (
           <p className="text-sm text-ink-muted">
             Add the date above to project your next step automatically.
           </p>
@@ -327,8 +327,7 @@ export function SetupScreen({
             <p className="text-sm text-ink-muted">
               Next step: Step {upcomingStep.nextStepIndex} — $
               {upcomingStep.nextRate.toFixed(4)}/hr, landing{" "}
-              {upcomingStep.nextDate}
-              {upcomingStep.approximateMatch && " (estimated)"}.
+              {upcomingStep.nextDate}.
             </p>
             <label className="flex items-center gap-2 text-sm text-ink-muted">
               <input

@@ -1,27 +1,21 @@
 import type { PayYear } from "../data/schema";
 import type { PayGrade } from "../engine/types";
 
-/** How close an entered rate must be to a published step to auto-match it.
- * Loose enough to absorb rounding in how someone typed their rate, tight
- * enough that two adjacent steps (often ~$1/hr apart) never collide. */
-const STEP_MATCH_TOLERANCE = 0.05;
-
-export interface StepMatch {
-  stepIndex: number;
-  stepRate: number;
-  /** True if the entered rate doesn't exactly match the published step —
-   * still usable for a next-step projection, just worth a caller's note. */
-  approximate: boolean;
-}
-
-/** Finds the closest step in a grade's table to an entered base rate (no
- * incentives). Returns null if nothing in the table is close at all —
- * e.g. a custom/negotiated rate the published table doesn't cover. */
+/**
+ * Finds the closest step in a grade's table to a previously-saved base rate
+ * (no incentives) — used only to pick a sensible default selection when
+ * Setup opens on an existing profile. Setup itself no longer takes a typed
+ * rate (members know their step, not their HR hourly rate to four decimal
+ * places), so there's nothing left to "mismatch": the step picker always
+ * produces an exact published rate. Returns null if the table's empty or
+ * the saved rate is nowhere close to any step in it (e.g. old data from a
+ * custom/negotiated rate, or a grade whose table has since changed).
+ */
 export function matchStep(
   year: PayYear,
   grade: PayGrade,
   hourlyRate: number,
-): StepMatch | null {
+): number | null {
   const table = year.payPlan[grade];
   if (!table || table.length === 0) return null;
 
@@ -37,13 +31,7 @@ export function matchStep(
 
   // Steps are typically ~$1/hr apart; anything further than that isn't a
   // plausible match at all, just the least-wrong entry in the table.
-  if (bestDiff > 1) return null;
-
-  return {
-    stepIndex: bestIndex,
-    stepRate: table[bestIndex],
-    approximate: bestDiff > STEP_MATCH_TOLERANCE,
-  };
+  return bestDiff > 1 ? null : bestIndex;
 }
 
 /** The next occurrence of `anniversary`'s month/day that falls on or after
@@ -65,40 +53,32 @@ export function nextAnniversaryOnOrAfter(
 }
 
 export interface UpcomingStep {
-  currentStepIndex: number;
   nextStepIndex: number;
   nextRate: number;
   nextDate: string;
-  approximateMatch: boolean;
 }
 
 /**
- * Projects a member's next step from their current grade/rate and their
+ * Projects a member's next step from their current grade/step and their
  * hire-or-most-recent-promotion date — the civil-service rule that step
  * progression lands on that personal anniversary, not a shared fiscal-year
- * date (docs/PAY_PLAN.md). Returns null if the rate doesn't match any step
- * closely enough to project from, or if they're already at the top step.
+ * date (docs/PAY_PLAN.md). Returns null if they're already at the top step.
  */
 export function computeUpcomingStep(
   year: PayYear,
   grade: PayGrade,
-  hourlyRate: number,
+  currentStepIndex: number,
   anniversaryDate: string,
   today: string,
 ): UpcomingStep | null {
-  const match = matchStep(year, grade, hourlyRate);
-  if (!match) return null;
-
   const table = year.payPlan[grade];
-  const nextIndex = match.stepIndex + 1;
-  if (nextIndex >= table.length) return null; // already at the top step
+  const nextIndex = currentStepIndex + 1;
+  if (!table || nextIndex >= table.length) return null; // already at the top step
 
   return {
-    currentStepIndex: match.stepIndex,
     nextStepIndex: nextIndex,
     nextRate: table[nextIndex],
     nextDate: nextAnniversaryOnOrAfter(anniversaryDate, today),
-    approximateMatch: match.approximate,
   };
 }
 
