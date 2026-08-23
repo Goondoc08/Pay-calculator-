@@ -13,18 +13,22 @@ import { clear, load, save } from "../storage/localStorage";
 import {
   periodEntryKey,
   type StoredDataV1,
+  type certificationsSchema,
   type progressionSchema,
 } from "../storage/schema";
 import type { HourBlock, Profile } from "../engine/types";
 import type { z } from "zod";
 
 type Progression = z.infer<typeof progressionSchema>;
+type Certifications = z.infer<typeof certificationsSchema>;
 
 interface AppDataValue {
   profile: Profile | null;
   setProfile: (profile: Profile) => void;
   progression: Progression | null;
   setProgression: (progression: Progression | null) => void;
+  certifications: Certifications | null;
+  setCertifications: (certifications: Certifications | null) => void;
   getPeriodBlocks: (yearId: string, periodNumber: number) => HourBlock[];
   setPeriodBlocks: (
     yearId: string,
@@ -77,6 +81,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const setProgression = useCallback(
     (progression: Progression | null) => {
       update((prev) => ({ ...prev, progression }));
+    },
+    [update],
+  );
+
+  const setCertifications = useCallback(
+    (certifications: Certifications | null) => {
+      update((prev) => ({ ...prev, certifications }));
     },
     [update],
   );
@@ -145,6 +156,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       setProfile,
       progression: data.progression,
       setProgression,
+      certifications: data.certifications,
+      setCertifications,
       getPeriodBlocks,
       setPeriodBlocks,
       selectedYearId: data.settings.selectedYearId,
@@ -159,10 +172,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     [
       data.profile,
       data.progression,
+      data.certifications,
       data.settings.selectedYearId,
       data.settings.installCardDismissed,
       setProfile,
       setProgression,
+      setCertifications,
       getPeriodBlocks,
       setPeriodBlocks,
       setSelectedYearId,

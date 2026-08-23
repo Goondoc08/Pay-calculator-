@@ -86,6 +86,21 @@ export const progressionSchema = z.object({
   receivingStep: z.boolean(),
 });
 
+/**
+ * Setup-screen metadata: which certifications drove the profile's combined
+ * incentiveTotal. Not read by the engine (it only ever sees that single
+ * summed rate) — kept here so Setup can show the member's actual picks
+ * again next time, instead of resetting every dropdown to "None" and
+ * risking a re-save that silently zeroes their incentive pay.
+ */
+export const certificationsSchema = z.object({
+  tcfp: z.string().nullable(),
+  education: z.string().nullable(),
+  emt: z.string().nullable(),
+  bilingual: z.boolean(),
+  assignment: z.string().nullable(),
+});
+
 export const hourBlockListSchema = z.array(hourBlockSchema);
 
 /** Key: `${yearId}:${periodNumber}`, e.g. "FY27:14". */
@@ -105,6 +120,7 @@ export const storedDataV1Schema = z.object({
   settings: settingsSchema,
   // .default(null) so data saved before this field existed still parses.
   progression: progressionSchema.nullable().default(null),
+  certifications: certificationsSchema.nullable().default(null),
 });
 
 export type StoredDataV1 = z.infer<typeof storedDataV1Schema>;
@@ -116,6 +132,7 @@ export function emptyStoredData(): StoredDataV1 {
     periodEntries: {},
     settings: { selectedYearId: null, installCardDismissed: false },
     progression: null,
+    certifications: null,
   };
 }
 

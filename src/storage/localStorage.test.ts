@@ -31,6 +31,7 @@ const sample: StoredDataV1 = {
   },
   settings: { selectedYearId: "FY27", installCardDismissed: false },
   progression: null,
+  certifications: null,
 };
 
 describe("load", () => {

@@ -70,8 +70,24 @@ export function SetupScreen({
   year: PayYear;
   onDone: () => void;
 }) {
-  const { profile, setProfile, progression, setProgression } = useAppData();
+  const {
+    profile,
+    setProfile,
+    progression,
+    setProgression,
+    certifications,
+    setCertifications,
+  } = useAppData();
   const firstSegment = profile?.rateSegments[0];
+
+  // A saved cert key that no longer exists in this year's incentive tables
+  // (a stale key from a year whose options changed, e.g. FY26's
+  // "EMT-P(FY25)" vs FY27's "EMT-P(FY26)") falls back to "None" rather than
+  // silently selecting nothing the dropdown can actually show as picked.
+  const savedOrNone = (
+    saved: string | null | undefined,
+    table: Record<string, number>,
+  ) => (saved && saved in table ? saved : NONE);
   const grades = Object.keys(year.payPlan) as PayGrade[];
 
   const [shift, setShift] = useState<ShiftLetter>(profile?.shift ?? "A");
@@ -88,11 +104,21 @@ export function SetupScreen({
     firstSegment ? (matchStep(year, grade, firstSegment.hourlyRate) ?? 0) : 0,
   );
 
-  const [tcfp, setTcfp] = useState(NONE);
-  const [education, setEducation] = useState(NONE);
-  const [emt, setEmt] = useState(NONE);
-  const [bilingual, setBilingual] = useState(false);
-  const [assignment, setAssignment] = useState(NONE);
+  const [tcfp, setTcfp] = useState(() =>
+    savedOrNone(certifications?.tcfp, year.incentives.tcfp),
+  );
+  const [education, setEducation] = useState(() =>
+    savedOrNone(certifications?.education, year.incentives.education),
+  );
+  const [emt, setEmt] = useState(() =>
+    savedOrNone(certifications?.emt, year.incentives.emt),
+  );
+  const [bilingual, setBilingual] = useState(
+    certifications?.bilingual ?? false,
+  );
+  const [assignment, setAssignment] = useState(() =>
+    savedOrNone(certifications?.assignment, year.incentives.assignment),
+  );
 
   const [longevity, setLongevity] = useState(
     profile?.longevityAnnual ? String(profile.longevityAnnual) : "",
@@ -169,6 +195,13 @@ export function SetupScreen({
       grade,
       anniversaryDate: anniversaryDate || null,
       receivingStep,
+    });
+    setCertifications({
+      tcfp: tcfp === NONE ? null : tcfp,
+      education: education === NONE ? null : education,
+      emt: emt === NONE ? null : emt,
+      bilingual,
+      assignment: assignment === NONE ? null : assignment,
     });
     onDone();
   }

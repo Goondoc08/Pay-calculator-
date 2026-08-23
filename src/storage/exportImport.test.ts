@@ -47,6 +47,13 @@ const sample: StoredDataV1 = {
     anniversaryDate: "2027-04-01",
     receivingStep: true,
   },
+  certifications: {
+    tcfp: "Adv",
+    education: null,
+    emt: "Paramedic",
+    bilingual: false,
+    assignment: null,
+  },
 };
 
 describe("export / import", () => {
