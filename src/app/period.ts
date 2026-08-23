@@ -18,25 +18,39 @@ const FALLBACK_STEP_UP_GRADE: PayGrade = "F2";
 const HOLIDAY_ENTITLEMENT_HOURS = 12;
 
 /**
- * Regular/PTO/step-up/TIFMAS are alternatives — a day is exactly one of
- * them. A holiday date is handled separately (see `holidayHoursWorked`
- * below): it isn't one-or-the-other, since working *part* of a holiday
- * pays both a worked premium for the hours worked and the leftover
- * observed entitlement for the hours that weren't — a first-class case,
- * not a variant of "off"/"regular".
+ * A holiday date is handled separately (see `holidayHoursWorked` below):
+ * it isn't one-or-the-other, since working *part* of a holiday pays both a
+ * worked premium for the hours worked and the leftover observed
+ * entitlement for the hours that weren't — a first-class case, not a
+ * variant of "off"/"regular".
  */
 export type DayEntryType = "off" | "regular" | "pto" | "stepUp" | "tifmas";
+
+/**
+ * One kind of hours on one day. A day usually has exactly one, but a shift
+ * can genuinely split — half worked at rank, half riding up as a step-up,
+ * say — so a day carries up to MAX_DAY_LINES of them.
+ */
+export interface DayLine {
+  type: DayEntryType;
+  hours: number;
+  /** Only meaningful for type "stepUp" — the grade being covered. */
+  grade: PayGrade;
+}
+
+/** A split shift needs two; more than that isn't a real timecard shape. */
+export const MAX_DAY_LINES = 2;
 
 export interface DayEntry {
   date: string;
   scheduledHours: number;
   isHoliday: boolean;
-  /** Meaningful only when !isHoliday. */
-  type: DayEntryType;
-  /** Meaningful only when !isHoliday. */
-  hours: number;
-  /** For type "stepUp". */
-  grade: PayGrade;
+  /**
+   * Meaningful only when !isHoliday — holiday days derive everything from
+   * `holidayHoursWorked` instead. Always at least one line; a day that
+   * isn't worked is a single line of type "off".
+   */
+  lines: DayLine[];
   /**
    * Meaningful only when isHoliday. Hours actually worked on the holiday
    * (0-24) — everything else derives from this. Verified against a real
@@ -107,22 +121,10 @@ function defaultEntry(
       date,
       scheduledHours,
       isHoliday,
-      type: "regular",
-      hours: 0,
-      grade: defaultStepUpGrade,
+      // Holiday days ignore `lines` entirely — holidayHoursWorked drives
+      // the whole RG/HW/HO split.
+      lines: [],
       holidayHoursWorked: scheduledHours,
-      holidayWorkedAccrued: false,
-    };
-  }
-  if (scheduledHours > 0) {
-    return {
-      date,
-      scheduledHours,
-      isHoliday,
-      type: "regular",
-      hours: scheduledHours,
-      grade: defaultStepUpGrade,
-      holidayHoursWorked: 0,
       holidayWorkedAccrued: false,
     };
   }
@@ -130,9 +132,11 @@ function defaultEntry(
     date,
     scheduledHours,
     isHoliday,
-    type: "off",
-    hours: 0,
-    grade: defaultStepUpGrade,
+    lines: [
+      scheduledHours > 0
+        ? { type: "regular", hours: scheduledHours, grade: defaultStepUpGrade }
+        : { type: "off", hours: 0, grade: defaultStepUpGrade },
+    ],
     holidayHoursWorked: 0,
     holidayWorkedAccrued: false,
   };
@@ -208,24 +212,26 @@ export function entriesToBlocks(entries: DayEntry[]): HourBlock[] {
       continue;
     }
 
-    if (entry.type === "off" || entry.hours <= 0) continue;
-    if (entry.type === "pto") {
-      blocks.push({ date: entry.date, type: "pto", hours: entry.hours });
-    } else if (entry.type === "stepUp") {
-      blocks.push({
-        date: entry.date,
-        type: "stepUp",
-        hours: entry.hours,
-        destination: "cash",
-        grade: entry.grade,
-      });
-    } else {
-      blocks.push({
-        date: entry.date,
-        type: entry.type,
-        hours: entry.hours,
-        destination: "cash",
-      });
+    for (const line of entry.lines) {
+      if (line.type === "off" || line.hours <= 0) continue;
+      if (line.type === "pto") {
+        blocks.push({ date: entry.date, type: "pto", hours: line.hours });
+      } else if (line.type === "stepUp") {
+        blocks.push({
+          date: entry.date,
+          type: "stepUp",
+          hours: line.hours,
+          destination: "cash",
+          grade: line.grade,
+        });
+      } else {
+        blocks.push({
+          date: entry.date,
+          type: line.type,
+          hours: line.hours,
+          destination: "cash",
+        });
+      }
     }
   }
   return blocks;
@@ -262,23 +268,31 @@ export function blocksToEntries(
       };
     }
 
-    if (dayBlocks.length === 0) return { ...entry, type: "off", hours: 0 };
-    const block = dayBlocks[0];
-    if (block.type === "pto") {
-      return { ...entry, type: "pto", hours: block.hours };
+    const defaultGrade = entry.lines[0]?.grade ?? FALLBACK_STEP_UP_GRADE;
+    const lines: DayLine[] = [];
+    for (const block of dayBlocks) {
+      if (lines.length >= MAX_DAY_LINES) break;
+      if (block.type === "pto") {
+        lines.push({ type: "pto", hours: block.hours, grade: defaultGrade });
+      } else if (block.type === "stepUp") {
+        lines.push({
+          type: "stepUp",
+          hours: block.hours,
+          grade: block.grade,
+        });
+      } else if (block.type === "regular" || block.type === "tifmas") {
+        lines.push({
+          type: block.type,
+          hours: block.hours,
+          grade: defaultGrade,
+        });
+      }
     }
-    if (block.type === "stepUp") {
-      return {
-        ...entry,
-        type: "stepUp",
-        hours: block.hours,
-        grade: block.grade,
-      };
+
+    if (lines.length === 0) {
+      lines.push({ type: "off", hours: 0, grade: defaultGrade });
     }
-    if (block.type === "regular" || block.type === "tifmas") {
-      return { ...entry, type: block.type, hours: block.hours };
-    }
-    return entry;
+    return { ...entry, lines };
   });
 }
 

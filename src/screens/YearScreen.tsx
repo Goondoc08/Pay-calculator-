@@ -44,12 +44,12 @@ export function YearScreen({
   }, [year, profile, getPeriodBlocks, memberGrade]);
 
   return (
-    <div className="flex flex-col gap-4 p-4 text-slate-100">
+    <div className="flex flex-col gap-4 p-4 text-ink">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">{year.label}</h1>
         {AVAILABLE_YEARS.length > 1 && (
           <select
-            className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-sm text-slate-100"
+            className="rounded-md border border-line bg-surface px-2 py-1 text-sm text-ink"
             value={year.id}
             onChange={(e) => onSelectYear(e.target.value)}
           >
@@ -68,24 +68,24 @@ export function YearScreen({
             key={period.n}
             type="button"
             onClick={() => onSelectPeriod(period.n)}
-            className="flex items-center justify-between rounded-lg border border-slate-800 p-3 text-left"
+            className="flex items-center justify-between rounded-lg border border-line p-3 text-left"
           >
             <div>
               <div className="text-sm font-medium">
                 Period {period.n}
                 {!hasEntries && (
-                  <span className="ml-2 text-xs text-slate-500">
+                  <span className="ml-2 text-xs text-ink-muted">
                     (default schedule)
                   </span>
                 )}
               </div>
-              <div className="text-xs text-slate-500">
+              <div className="text-xs text-ink-muted">
                 {period.start} – {period.end}
               </div>
             </div>
             <div className="text-right">
               <div className="text-sm font-semibold">${gross.toFixed(2)}</div>
-              <div className="text-xs text-slate-500">
+              <div className="text-xs text-ink-muted">
                 running ${running.toFixed(2)}
               </div>
             </div>

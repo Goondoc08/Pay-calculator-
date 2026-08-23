@@ -1,3 +1,97 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/**
+ * Deep Alpine & Slate palette. Every colour the UI uses is a semantic token
+ * here rather than a raw hex in a component, so light and dark are two
+ * definitions of the same names instead of two sets of classes.
+ *
+ * Holiday lavender (#A98EF0) is deliberately shared with the PFD Link app,
+ * which in turn took it from the purple the department fills holiday cells
+ * with on its own pay calendar workbook — the same fill this app's importer
+ * keys off to detect holiday dates. One colour, three places, same meaning.
+ */
+:root {
+  /* Light (the palette's own stated roles: Crisp White is the primary
+     surface, Fog Gray the backdrop, Slate Ink the text). */
+  --c-canvas: #e2e8e8; /* Fog Gray */
+  --c-surface: #ffffff; /* Crisp White */
+  --c-surface-alt: #f3f7f6;
+  --c-line: #c7d2d2;
+  --c-line-strong: #a9b8b8;
+  --c-text: #111923; /* Slate Ink */
+  --c-text-muted: #566068;
+
+  --c-brand: #1b3b36; /* Deep Alpine */
+  --c-brand-ink: #ffffff;
+  --c-structure: #2c3e50; /* Slate Navy */
+
+  --c-accent: #3d6b63; /* Alpine Teal */
+  --c-accent-ink: #ffffff;
+  --c-accent-soft: #e6efec;
+
+  --c-holiday: #a98ef0; /* Holiday Lavender */
+  --c-holiday-ink: #5b3fa8;
+  --c-holiday-soft: #f2edfd;
+
+  --c-warn: #b5560a; /* Vibrant Amber, darkened for text on white */
+  --c-warn-soft: #fdf0e4;
+  --c-good: #2f6b52;
+  --c-brass: #8c6a2c; /* Refined Brass */
+
+  /* Not in the supplied palette — destructive actions (wipe, delete) need
+     to read as more than a warning. Kept muted to match the palette's
+     restraint rather than a bright alarm red. */
+  --c-danger: #a3312b;
+  --c-danger-ink: #ffffff;
+  --c-danger-soft: #fbeceb;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --c-canvas: #111923; /* Slate Ink */
+    --c-surface: #1a2531;
+    --c-surface-alt: #22303e;
+    --c-line: #2c3e50; /* Slate Navy */
+    --c-line-strong: #3d5165;
+    --c-text: #e9eeee;
+    --c-text-muted: #93a3ad;
+
+    --c-brand: #1b3b36;
+    --c-brand-ink: #eaf2f0;
+    --c-structure: #2c3e50;
+
+    --c-accent: #6fb3a6;
+    --c-accent-ink: #0d1a17;
+    --c-accent-soft: #1d3a34;
+
+    --c-holiday: #a98ef0;
+    --c-holiday-ink: #c9b6f7;
+    --c-holiday-soft: #2a2440;
+
+    --c-warn: #f0913d;
+    --c-warn-soft: #33241a;
+    --c-good: #6fb3a6;
+    --c-brass: #c79a4a;
+
+    --c-danger: #e8736a;
+    --c-danger-ink: #2a100d;
+    --c-danger-soft: #33201e;
+
+    color-scheme: dark;
+  }
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  background: var(--c-canvas);
+  color: var(--c-text);
+}

@@ -18,16 +18,16 @@ function TabBar({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void }) {
     { key: "settings", label: "Settings" },
   ];
   return (
-    <nav className="flex border-b border-slate-800 bg-slate-950">
+    <nav className="flex border-b border-line bg-brand">
       {tabs.map((t) => (
         <button
           key={t.key}
           type="button"
           onClick={() => onChange(t.key)}
-          className={`flex-1 py-3 text-sm font-medium ${
+          className={`flex-1 py-3 text-sm font-medium transition-colors ${
             tab === t.key
-              ? "border-b-2 border-emerald-500 text-emerald-400"
-              : "text-slate-400"
+              ? "border-b-2 border-holiday text-brand-ink"
+              : "border-b-2 border-transparent text-brand-ink/60"
           }`}
         >
           {t.label}
@@ -63,7 +63,7 @@ function AppShell() {
   }
 
   return (
-    <div className="min-h-dvh bg-slate-950 text-slate-100">
+    <div className="min-h-dvh bg-canvas text-ink">
       <TabBar tab={tab} onChange={setTab} />
       <InstallCard />
       {tab === "period" && (

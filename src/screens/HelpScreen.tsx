@@ -4,9 +4,9 @@ import { Steps } from "./InstallCard";
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-slate-800 p-3">
-      <h2 className="text-sm font-medium text-slate-200">{title}</h2>
-      <div className="flex flex-col gap-2 text-sm text-slate-300">
+    <div className="flex flex-col gap-2 rounded-lg border border-line p-3">
+      <h2 className="text-sm font-medium text-ink">{title}</h2>
+      <div className="flex flex-col gap-2 text-sm text-ink-muted">
         {children}
       </div>
     </div>
@@ -17,12 +17,12 @@ export function HelpScreen({ onBack }: { onBack: () => void }) {
   const platform = detectPlatform(navigator.userAgent);
 
   return (
-    <div className="flex flex-col gap-4 p-4 text-slate-100">
+    <div className="flex flex-col gap-4 p-4 text-ink">
       <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={onBack}
-          className="text-sm text-slate-400"
+          className="text-sm text-ink-muted"
         >
           ← Back
         </button>
@@ -35,7 +35,7 @@ export function HelpScreen({ onBack }: { onBack: () => void }) {
           department's own spreadsheet uses, but showing you which line is right
           or wrong instead of just a total.
         </p>
-        <p className="text-amber-400">
+        <p className="text-warn">
           It's an estimate for comparison, not a payroll record. If it disagrees
           with your check, that's a reason to go ask — not proof on its own.
         </p>
@@ -52,11 +52,11 @@ export function HelpScreen({ onBack }: { onBack: () => void }) {
 
       <Section title="Every period">
         <p>
-          <span className="text-slate-100">This Period</span> pre-fills your 24s
-          from your normal rotation. You only touch the days that were
-          different: called in sick, picked up a trade, worked a holiday, rode
-          up a rank. Your total is pinned at the bottom; tap "Itemized
-          breakdown" to see how it's built.
+          <span className="text-ink">This Period</span> pre-fills your 24s from
+          your normal rotation. You only touch the days that were different:
+          called in sick, picked up a trade, worked a holiday, rode up a rank.
+          Your total is pinned at the bottom; tap "Itemized breakdown" to see
+          how it's built.
         </p>
       </Section>
 
@@ -78,7 +78,7 @@ export function HelpScreen({ onBack }: { onBack: () => void }) {
 
       <Section title="Install it">
         <Steps platform={platform} />
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-ink-muted">
           Once installed, it works with no signal at all — nothing on this
           screen or any period screen needs to reach the internet.
         </p>

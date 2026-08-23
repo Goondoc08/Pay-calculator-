@@ -44,29 +44,39 @@ describe("defaultDayEntries", () => {
     expect(mlk?.holidayHoursWorked).toBe(0);
   });
 
-  it("defaults a plain scheduled day to regular", () => {
+  it("defaults a plain scheduled day to a single regular line", () => {
     const entries = defaultDayEntries(year, "A", period);
     const regularDay = entries.find((e) => e.date === "2026-11-21");
-    expect(regularDay?.type).toBe("regular");
-    expect(regularDay?.hours).toBe(24);
+    expect(regularDay?.lines).toHaveLength(1);
+    expect(regularDay?.lines[0].type).toBe("regular");
+    expect(regularDay?.lines[0].hours).toBe(24);
   });
 
-  it("defaults a scheduled-off day to off with 0 hours", () => {
+  it("defaults a scheduled-off day to a single off line with 0 hours", () => {
     const entries = defaultDayEntries(year, "A", period);
     const offDay = entries.find((e) => e.date === "2026-11-22");
-    expect(offDay?.type).toBe("off");
-    expect(offDay?.hours).toBe(0);
+    expect(offDay?.lines).toHaveLength(1);
+    expect(offDay?.lines[0].type).toBe("off");
+    expect(offDay?.lines[0].hours).toBe(0);
+  });
+
+  it("gives a holiday day no generic lines — it derives from hours worked", () => {
+    const entries = defaultDayEntries(year, "A", period);
+    const thanksgiving = entries.find((e) => e.date === "2026-11-26");
+    expect(thanksgiving?.lines).toEqual([]);
   });
 
   it("never defaults grade to F1 — it's never a valid step-up target", () => {
-    // Regression: the UI's step-up grade picker only lists F2+, so if an
-    // entry's default grade were "F1" the picker would visually show its
-    // first listed option (F2) while the entry actually held "F1" —
+    // Regression: the UI's step-up grade picker only lists F2+, so if a
+    // line's default grade were "F1" the picker would visually show its
+    // first listed option (F2) while the line actually held "F1" —
     // silently pricing a step-up block at the wrong (lower) rate the
     // moment someone picked "Step-up" without also touching the grade
     // dropdown themselves.
     const entries = defaultDayEntries(year, "A", period);
-    expect(entries.every((e) => e.grade !== "F1")).toBe(true);
+    expect(entries.every((e) => e.lines.every((l) => l.grade !== "F1"))).toBe(
+      true,
+    );
   });
 
   it("defaults step-up grade to the one directly above the member's own", () => {
@@ -75,12 +85,16 @@ describe("defaultDayEntries", () => {
     // (docs/PAY_PLAN.md) — an F3 member defaults to riding up as F4, not
     // always F2.
     const entriesForF3 = defaultDayEntries(year, "A", period, "F3");
-    expect(entriesForF3.every((e) => e.grade === "F4")).toBe(true);
+    expect(
+      entriesForF3.every((e) => e.lines.every((l) => l.grade === "F4")),
+    ).toBe(true);
   });
 
   it("falls back to F2 when the member's grade isn't known yet", () => {
     const entries = defaultDayEntries(year, "A", period, null);
-    expect(entries.every((e) => e.grade === "F2")).toBe(true);
+    expect(entries.every((e) => e.lines.every((l) => l.grade === "F2"))).toBe(
+      true,
+    );
   });
 });
 
@@ -292,6 +306,53 @@ describe("entriesToBlocks / blocksToEntries round-trip", () => {
     ]);
 
     const roundTripped = blocksToEntries(year, "A", period, blocks);
+    expect(roundTripped).toEqual(entries);
+  });
+
+  it("splits one day into two lines — half at rank, half riding up", () => {
+    // The real case this exists for: a 24-hr shift worked partly at the
+    // member's own grade and partly covering the rank above.
+    const period = year.periods[4];
+    const entries = defaultDayEntries(year, "A", period, "F2").map((e) =>
+      e.date === "2026-11-21"
+        ? {
+            ...e,
+            lines: [
+              { type: "regular" as const, hours: 12, grade: "F3" as const },
+              { type: "stepUp" as const, hours: 12, grade: "F3" as const },
+            ],
+          }
+        : e,
+    );
+    const blocks = entriesToBlocks(entries);
+    const dayBlocks = blocks.filter((b) => b.date === "2026-11-21");
+    expect(dayBlocks).toEqual([
+      { date: "2026-11-21", type: "regular", hours: 12, destination: "cash" },
+      {
+        date: "2026-11-21",
+        type: "stepUp",
+        hours: 12,
+        destination: "cash",
+        grade: "F3",
+      },
+    ]);
+  });
+
+  it("round-trips a split day without collapsing it back to one line", () => {
+    const period = year.periods[4];
+    const entries = defaultDayEntries(year, "A", period, "F2").map((e) =>
+      e.date === "2026-11-21"
+        ? {
+            ...e,
+            lines: [
+              { type: "regular" as const, hours: 12, grade: "F3" as const },
+              { type: "stepUp" as const, hours: 12, grade: "F3" as const },
+            ],
+          }
+        : e,
+    );
+    const blocks = entriesToBlocks(entries);
+    const roundTripped = blocksToEntries(year, "A", period, blocks, "F2");
     expect(roundTripped).toEqual(entries);
   });
 

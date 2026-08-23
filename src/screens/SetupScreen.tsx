@@ -46,10 +46,10 @@ function Select({
   options: { value: string; label: string }[];
 }) {
   return (
-    <label className="flex flex-col gap-1 text-sm text-slate-300">
+    <label className="flex flex-col gap-1 text-sm text-ink-muted">
       {label}
       <select
-        className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100"
+        className="rounded-md border border-line bg-surface px-3 py-2 text-ink"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >
@@ -161,10 +161,10 @@ export function SetupScreen({
   }
 
   return (
-    <div className="flex flex-col gap-5 p-4 text-slate-100">
+    <div className="flex flex-col gap-5 p-4 text-ink">
       <div>
         <h1 className="text-xl font-semibold">Setup</h1>
-        <p className="mt-1 text-sm text-slate-400">
+        <p className="mt-1 text-sm text-ink-muted">
           One-time setup. Update your rate here again whenever you get a step or
           a raise.
         </p>
@@ -188,10 +188,10 @@ export function SetupScreen({
         options={grades.map((g) => ({ value: g, label: GRADE_LABELS[g] ?? g }))}
       />
 
-      <label className="flex flex-col gap-1 text-sm text-slate-300">
+      <label className="flex flex-col gap-1 text-sm text-ink-muted">
         Hourly rate
         <input
-          className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100"
+          className="rounded-md border border-line bg-surface px-3 py-2 text-ink"
           type="number"
           step="0.0001"
           inputMode="decimal"
@@ -201,10 +201,10 @@ export function SetupScreen({
         />
       </label>
 
-      <label className="flex flex-col gap-1 text-sm text-slate-300">
+      <label className="flex flex-col gap-1 text-sm text-ink-muted">
         Last longevity payoff (LP)
         <input
-          className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100"
+          className="rounded-md border border-line bg-surface px-3 py-2 text-ink"
           type="number"
           step="0.01"
           inputMode="decimal"
@@ -212,14 +212,14 @@ export function SetupScreen({
           onChange={(e) => setLongevity(e.target.value)}
           placeholder="284.00"
         />
-        <span className="text-xs text-slate-500">
+        <span className="text-xs text-ink-muted">
           From your October longevity check. Paid separately, but FLSA folds it
           into the overtime rate, so it slightly raises OT periods.
         </span>
       </label>
 
-      <div className="flex flex-col gap-3 rounded-lg border border-slate-800 p-3">
-        <h2 className="text-sm font-medium text-slate-300">Certifications</h2>
+      <div className="flex flex-col gap-3 rounded-lg border border-line p-3">
+        <h2 className="text-sm font-medium text-ink-muted">Certifications</h2>
         <Select
           label="TCFP"
           value={tcfp}
@@ -268,7 +268,7 @@ export function SetupScreen({
             })),
           ]}
         />
-        <label className="flex items-center gap-2 text-sm text-slate-300">
+        <label className="flex items-center gap-2 text-sm text-ink-muted">
           <input
             type="checkbox"
             checked={bilingual}
@@ -276,18 +276,18 @@ export function SetupScreen({
           />
           Bilingual
         </label>
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-ink-muted">
           Incentive total:{" "}
-          <span className="text-slate-100">${incentives.toFixed(4)}/hr</span>
+          <span className="text-ink">${incentives.toFixed(4)}/hr</span>
         </p>
       </div>
 
-      <div className="flex flex-col gap-3 rounded-lg border border-slate-800 p-3">
-        <h2 className="text-sm font-medium text-slate-300">Step progression</h2>
-        <label className="flex flex-col gap-1 text-sm text-slate-300">
+      <div className="flex flex-col gap-3 rounded-lg border border-line p-3">
+        <h2 className="text-sm font-medium text-ink-muted">Step progression</h2>
+        <label className="flex flex-col gap-1 text-sm text-ink-muted">
           Hire date (or your most recent promotion date, if later)
           <input
-            className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100"
+            className="rounded-md border border-line bg-surface px-3 py-2 text-ink"
             type="date"
             value={anniversaryDate}
             onChange={(e) => setAnniversaryDate(e.target.value)}
@@ -295,7 +295,7 @@ export function SetupScreen({
         </label>
 
         {rateValid && !stepMatch && (
-          <p className="text-sm text-amber-400">
+          <p className="text-sm text-warn">
             That rate doesn't match a published step for{" "}
             {GRADE_LABELS[grade] ?? grade} — step projection isn't available,
             but your rate is still used as entered.
@@ -303,34 +303,34 @@ export function SetupScreen({
         )}
 
         {stepMatch && (
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-ink-muted">
             That's Step {stepMatch.stepIndex} of {GRADE_LABELS[grade] ?? grade}
             {stepMatch.approximate && " (closest match)"}.
           </p>
         )}
 
         {stepMatch && !upcomingStep && anniversaryDate && (
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-ink-muted">
             You're already at the top step of this grade — no further step to
             project.
           </p>
         )}
 
         {stepMatch && !anniversaryDate && (
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-ink-muted">
             Add the date above to project your next step automatically.
           </p>
         )}
 
         {upcomingStep && (
           <>
-            <p className="text-sm text-slate-300">
+            <p className="text-sm text-ink-muted">
               Next step: Step {upcomingStep.nextStepIndex} — $
               {upcomingStep.nextRate.toFixed(4)}/hr, landing{" "}
               {upcomingStep.nextDate}
               {upcomingStep.approximateMatch && " (estimated)"}.
             </p>
-            <label className="flex items-center gap-2 text-sm text-slate-300">
+            <label className="flex items-center gap-2 text-sm text-ink-muted">
               <input
                 type="checkbox"
                 checked={receivingStep}
@@ -346,12 +346,12 @@ export function SetupScreen({
         type="button"
         disabled={!canSave}
         onClick={handleSave}
-        className="rounded-md bg-emerald-600 px-4 py-3 font-medium text-white disabled:opacity-40"
+        className="rounded-md bg-accent px-4 py-3 font-medium text-accent-ink disabled:opacity-40"
       >
         Save
       </button>
 
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-ink-muted">
         This is an unofficial estimation tool for personal comparison. It is not
         a payroll record and carries no authority in a pay dispute.
       </p>

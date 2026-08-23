@@ -13,8 +13,12 @@ export default defineConfig({
         name: "48/96 Pay Calculator",
         short_name: "48/96",
         description: "Fire department shift pay calculator",
-        theme_color: "#0f172a",
-        background_color: "#0f172a",
+        // The manifest can only carry one value, so it takes Deep Alpine —
+        // the brand colour, readable as a splash/task-switcher tint in
+        // either system theme. The in-page <meta name="theme-color"> tags
+        // do respond to light/dark.
+        theme_color: "#1b3b36",
+        background_color: "#1b3b36",
         display: "standalone",
         start_url: "/Pay-calculator-/",
         scope: "/Pay-calculator-/",
