@@ -148,6 +148,59 @@ describe("entriesToBlocks / blocksToEntries round-trip", () => {
     expect(roundTripped).toEqual(entries);
   });
 
+  it("banks worked holiday hours as comp ($0) when holidayWorkedComped is set", () => {
+    // Confirmed by a real timecard: working a holiday and taking it as
+    // comp instead of cash means no straight/premium pay for the worked
+    // portion this check — same $0-if-banked rule as any other worked
+    // hours, just previously unreachable for the holiday-worked case
+    // specifically since that input only ever emitted "cash".
+    const period = year.periods[4];
+    const entries = defaultDayEntries(year, "A", period).map((e) =>
+      e.date === "2026-11-26"
+        ? { ...e, holidayHoursWorked: 24, holidayWorkedComped: true }
+        : e,
+    );
+    const blocks = entriesToBlocks(entries);
+    const thanksgivingBlocks = blocks.filter((b) => b.date === "2026-11-26");
+    expect(thanksgivingBlocks).toEqual([
+      {
+        date: "2026-11-26",
+        type: "holidayWorked",
+        hours: 24,
+        destination: "comp",
+      },
+    ]);
+
+    const profile = {
+      shift: "A" as const,
+      rateSegments: [
+        {
+          effectiveFrom: year.effectiveFrom,
+          hourlyRate: 26.8173,
+          incentiveTotal: 0,
+        },
+      ],
+    };
+    const thanksgivingGross = computePeriod(
+      year,
+      profile,
+      thanksgivingBlocks,
+    ).gross;
+    expect(thanksgivingGross).toBe(0);
+  });
+
+  it("round-trips a comped holiday-worked entry", () => {
+    const period = year.periods[4];
+    const entries = defaultDayEntries(year, "A", period).map((e) =>
+      e.date === "2026-11-26"
+        ? { ...e, holidayHoursWorked: 24, holidayWorkedComped: true }
+        : e,
+    );
+    const blocks = entriesToBlocks(entries);
+    const roundTripped = blocksToEntries(year, "A", period, blocks);
+    expect(roundTripped).toEqual(entries);
+  });
+
   it("emits every block as destination cash — no comp/accrue tracking", () => {
     const period = year.periods[4];
     const entries = defaultDayEntries(year, "A", period);

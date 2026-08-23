@@ -83,11 +83,24 @@ function DayCell({
           }
         />
         <p className="truncate text-[9px] leading-tight text-slate-500">
-          {worked > 0 && `${worked}HW`}
+          {worked > 0 &&
+            `${worked}HW${entry.holidayWorkedComped ? "(comp)" : ""}`}
           {worked > 0 && leftover > 0 && "+"}
           {leftover > 0 && `${leftover}HO`}
           {worked === 0 && leftover === 0 && "—"}
         </p>
+        {worked > 0 && (
+          <label className="flex items-center gap-0.5 text-[9px] leading-tight text-slate-400">
+            <input
+              type="checkbox"
+              checked={entry.holidayWorkedComped}
+              onChange={(e) =>
+                onChange({ ...entry, holidayWorkedComped: e.target.checked })
+              }
+            />
+            comp
+          </label>
+        )}
       </div>
     );
   }

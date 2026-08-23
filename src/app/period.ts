@@ -47,6 +47,14 @@ export interface DayEntry {
    * yet checked against a real paystub (docs/BUILD_PLAN.md Phase 06).
    */
   holidayHoursWorked: number;
+  /**
+   * Meaningful only when isHoliday and holidayHoursWorked > 0. Working a
+   * holiday can still be banked as comp instead of cash, same as any other
+   * worked hours — when true, the worked (1.5x) portion pays $0 this
+   * check. The leftover holiday-observed entitlement always still pays
+   * cash regardless of this flag; only the worked portion is bankable.
+   */
+  holidayWorkedComped: boolean;
 }
 
 function datesInPeriod(period: Period): string[] {
@@ -95,6 +103,7 @@ function defaultEntry(
       hours: 0,
       grade: defaultStepUpGrade,
       holidayHoursWorked: scheduledHours,
+      holidayWorkedComped: false,
     };
   }
   if (scheduledHours > 0) {
@@ -106,6 +115,7 @@ function defaultEntry(
       hours: scheduledHours,
       grade: defaultStepUpGrade,
       holidayHoursWorked: 0,
+      holidayWorkedComped: false,
     };
   }
   return {
@@ -116,6 +126,7 @@ function defaultEntry(
     hours: 0,
     grade: defaultStepUpGrade,
     holidayHoursWorked: 0,
+    holidayWorkedComped: false,
   };
 }
 
@@ -152,7 +163,7 @@ export function entriesToBlocks(entries: DayEntry[]): HourBlock[] {
           date: entry.date,
           type: "holidayWorked",
           hours: worked,
-          destination: "cash",
+          destination: entry.holidayWorkedComped ? "comp" : "cash",
         });
       }
       const leftover = Math.max(0, HOLIDAY_ENTITLEMENT_HOURS - worked);
@@ -210,7 +221,11 @@ export function blocksToEntries(
 
     if (entry.isHoliday) {
       const worked = dayBlocks.find((b) => b.type === "holidayWorked");
-      return { ...entry, holidayHoursWorked: worked?.hours ?? 0 };
+      return {
+        ...entry,
+        holidayHoursWorked: worked?.hours ?? 0,
+        holidayWorkedComped: worked?.destination === "comp",
+      };
     }
 
     if (dayBlocks.length === 0) return { ...entry, type: "off", hours: 0 };
