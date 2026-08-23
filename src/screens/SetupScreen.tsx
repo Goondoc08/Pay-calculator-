@@ -145,9 +145,11 @@ export function SetupScreen({
       ],
     };
     setProfile(newProfile);
-    setProgression(
-      anniversaryDate ? { grade, anniversaryDate, receivingStep } : null,
-    );
+    setProgression({
+      grade,
+      anniversaryDate: anniversaryDate || null,
+      receivingStep,
+    });
     onDone();
   }
 

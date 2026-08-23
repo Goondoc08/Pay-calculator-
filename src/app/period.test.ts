@@ -68,6 +68,20 @@ describe("defaultDayEntries", () => {
     const entries = defaultDayEntries(year, "A", period);
     expect(entries.every((e) => e.grade !== "F1")).toBe(true);
   });
+
+  it("defaults step-up grade to the one directly above the member's own", () => {
+    // Step-up always covers Step 0 of the grade above the member's own,
+    // regardless of the member's own step within their grade
+    // (docs/PAY_PLAN.md) — an F3 member defaults to riding up as F4, not
+    // always F2.
+    const entriesForF3 = defaultDayEntries(year, "A", period, "F3");
+    expect(entriesForF3.every((e) => e.grade === "F4")).toBe(true);
+  });
+
+  it("falls back to F2 when the member's grade isn't known yet", () => {
+    const entries = defaultDayEntries(year, "A", period, null);
+    expect(entries.every((e) => e.grade === "F2")).toBe(true);
+  });
 });
 
 describe("entriesToBlocks / blocksToEntries round-trip", () => {

@@ -21,7 +21,8 @@ export function YearScreen({
   onSelectPeriod: (periodNumber: number) => void;
   onSelectYear: (yearId: string) => void;
 }) {
-  const { getPeriodBlocks } = useAppData();
+  const { getPeriodBlocks, progression } = useAppData();
+  const memberGrade = progression?.grade ?? null;
 
   const rows = useMemo(() => {
     let running = 0;
@@ -29,8 +30,8 @@ export function YearScreen({
       const saved = getPeriodBlocks(year.id, period.n);
       const entries =
         saved.length > 0
-          ? blocksToEntries(year, profile.shift, period, saved)
-          : defaultDayEntries(year, profile.shift, period);
+          ? blocksToEntries(year, profile.shift, period, saved, memberGrade)
+          : defaultDayEntries(year, profile.shift, period, memberGrade);
       const result = computePeriod(year, profile, entriesToBlocks(entries));
       running += result.gross;
       return {
@@ -40,7 +41,7 @@ export function YearScreen({
         hasEntries: saved.length > 0,
       };
     });
-  }, [year, profile, getPeriodBlocks]);
+  }, [year, profile, getPeriodBlocks, memberGrade]);
 
   return (
     <div className="flex flex-col gap-4 p-4 text-slate-100">

@@ -102,6 +102,23 @@ export function computeUpcomingStep(
   };
 }
 
+/**
+ * The grade a member rides up into by default — always the one directly
+ * above their own, at its Step 0 (docs/PAY_PLAN.md: step-up always covers
+ * Step 0 of the covered grade, regardless of the member's own step — e.g.
+ * an F2 at Step 4 riding up covers F3 Step 0, not F2's own next step).
+ * Grade order comes from the year file's own payPlan keys (FY26 has
+ * F1..F5, FY27's proposed merger drops it to F1..F4), not a fixed list.
+ * Returns null if the member's grade is already the top grade for the
+ * year, or isn't one of the year's grades at all.
+ */
+export function nextGradeUp(year: PayYear, grade: PayGrade): PayGrade | null {
+  const grades = Object.keys(year.payPlan) as PayGrade[];
+  const index = grades.indexOf(grade);
+  if (index === -1 || index + 1 >= grades.length) return null;
+  return grades[index + 1];
+}
+
 export const GRADE_LABELS: Record<string, string> = {
   F1: "Fire Fighter (F1)",
   F2: "Driver/Operator (F2)",

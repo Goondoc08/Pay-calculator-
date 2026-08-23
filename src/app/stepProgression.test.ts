@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
+import fy26Raw from "../data/fy26.json";
 import fy27Raw from "../data/fy27.json";
 import { parsePayYear } from "../data/schema";
 import {
   computeUpcomingStep,
   matchStep,
   nextAnniversaryOnOrAfter,
+  nextGradeUp,
 } from "./stepProgression";
 
 const year = parsePayYear(fy27Raw);
@@ -85,5 +87,24 @@ describe("computeUpcomingStep", () => {
     expect(
       computeUpcomingStep(year, "F1", 5, "2020-04-01", "2027-01-01"),
     ).toBeNull();
+  });
+});
+
+describe("nextGradeUp", () => {
+  it("returns the grade directly above the member's own", () => {
+    expect(nextGradeUp(year, "F1")).toBe("F2");
+    expect(nextGradeUp(year, "F2")).toBe("F3");
+    expect(nextGradeUp(year, "F3")).toBe("F4");
+  });
+
+  it("returns null at the year's top grade (FY27 has no F5)", () => {
+    expect(nextGradeUp(year, "F4")).toBeNull();
+  });
+
+  it("reads grade order from the year file, not a fixed 4-grade list", () => {
+    // FY26 has 5 grades; F4 -> F5 only makes sense read from its own table.
+    const fy26 = parsePayYear(fy26Raw);
+    expect(nextGradeUp(fy26, "F4")).toBe("F5");
+    expect(nextGradeUp(fy26, "F5")).toBeNull();
   });
 });

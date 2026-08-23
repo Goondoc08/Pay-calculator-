@@ -12,12 +12,15 @@ import type { PayYear, Period } from "../data/schema";
 import { computePeriod } from "../engine/period";
 import type { PayGrade, Profile } from "../engine/types";
 
+// Deliberately short — a 7-column grid on a phone doesn't have room for a
+// native <select> to show "Regular"/"Step-up" without the browser clipping
+// it awkwardly mid-word. Short on purpose beats accidentally truncated.
 const TYPE_LABELS: Record<DayEntryType, string> = {
   off: "Off",
-  regular: "Regular",
+  regular: "Reg",
   pto: "PTO",
-  stepUp: "Step-up",
-  tifmas: "TIFMAS",
+  stepUp: "Step",
+  tifmas: "TIF",
 };
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -41,45 +44,48 @@ function DayCell({
   onChange: (next: DayEntry) => void;
 }) {
   const dayLabel = (
-    <div className="flex items-baseline justify-between">
-      <span className="text-xs font-medium text-slate-300">
-        {weekdayName(entry.date)} {entry.date.slice(8)}
+    <div className="flex items-baseline justify-between gap-0.5">
+      <span className="truncate text-[10px] font-medium text-slate-300">
+        {weekdayName(entry.date).slice(0, 2)} {entry.date.slice(8)}
       </span>
       {entry.isHoliday && (
-        <span className="rounded bg-amber-900/50 px-1 text-[10px] leading-4 text-amber-300">
-          holiday
+        <span
+          className="shrink-0 rounded bg-amber-900/50 px-0.5 text-[9px] leading-4 text-amber-300"
+          title="Holiday"
+        >
+          🎆
         </span>
       )}
     </div>
   );
 
+  const fieldClass =
+    "w-full rounded border border-slate-700 bg-slate-900 px-0.5 py-0.5 text-[11px] leading-tight text-slate-100";
+
   if (entry.isHoliday) {
     const worked = Math.min(24, Math.max(0, entry.holidayHoursWorked));
     const leftover = Math.max(0, 12 - worked);
     return (
-      <div className="flex flex-col gap-1 rounded border border-amber-900/40 bg-amber-950/10 p-1.5">
+      <div className="flex flex-col gap-0.5 rounded border border-amber-900/40 bg-amber-950/10 p-1">
         {dayLabel}
-        <label className="flex items-center gap-1 text-[11px] text-slate-400">
-          worked
-          <input
-            className="w-12 rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-xs text-slate-100"
-            type="number"
-            min={0}
-            max={24}
-            step="0.25"
-            value={entry.holidayHoursWorked}
-            onChange={(e) =>
-              onChange({
-                ...entry,
-                holidayHoursWorked: Number(e.target.value) || 0,
-              })
-            }
-          />
-        </label>
-        <p className="text-[10px] leading-tight text-slate-500">
-          {worked > 0 && `${worked}h HW`}
-          {worked > 0 && leftover > 0 && " + "}
-          {leftover > 0 && `${leftover}h HO`}
+        <input
+          className={fieldClass}
+          type="number"
+          min={0}
+          max={24}
+          step="0.25"
+          value={entry.holidayHoursWorked}
+          onChange={(e) =>
+            onChange({
+              ...entry,
+              holidayHoursWorked: Number(e.target.value) || 0,
+            })
+          }
+        />
+        <p className="truncate text-[9px] leading-tight text-slate-500">
+          {worked > 0 && `${worked}HW`}
+          {worked > 0 && leftover > 0 && "+"}
+          {leftover > 0 && `${leftover}HO`}
           {worked === 0 && leftover === 0 && "—"}
         </p>
       </div>
@@ -87,10 +93,10 @@ function DayCell({
   }
 
   return (
-    <div className="flex flex-col gap-1 rounded border border-slate-800 p-1.5">
+    <div className="flex flex-col gap-0.5 rounded border border-slate-800 p-1">
       {dayLabel}
       <select
-        className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-xs text-slate-100"
+        className={fieldClass}
         value={entry.type}
         onChange={(e) => {
           const type = e.target.value as DayEntryType;
@@ -108,7 +114,7 @@ function DayCell({
 
       {entry.type !== "off" && (
         <input
-          className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-xs text-slate-100"
+          className={fieldClass}
           type="number"
           min={0}
           step="0.25"
@@ -121,7 +127,7 @@ function DayCell({
 
       {entry.type === "stepUp" && (
         <select
-          className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-xs text-slate-100"
+          className={fieldClass}
           value={entry.grade}
           onChange={(e) =>
             onChange({ ...entry, grade: e.target.value as PayGrade })
@@ -241,16 +247,17 @@ export function PeriodScreen({
   period: Period;
   onNavigate: (periodNumber: number) => void;
 }) {
-  const { getPeriodBlocks, setPeriodBlocks } = useAppData();
+  const { getPeriodBlocks, setPeriodBlocks, progression } = useAppData();
   const [breakdownOpen, setBreakdownOpen] = useState(false);
+  const memberGrade = progression?.grade ?? null;
 
   const entries = useMemo<DayEntry[]>(() => {
     const saved = getPeriodBlocks(year.id, period.n);
     if (saved.length > 0) {
-      return blocksToEntries(year, profile.shift, period, saved);
+      return blocksToEntries(year, profile.shift, period, saved, memberGrade);
     }
-    return defaultDayEntries(year, profile.shift, period);
-  }, [year, profile.shift, period, getPeriodBlocks]);
+    return defaultDayEntries(year, profile.shift, period, memberGrade);
+  }, [year, profile.shift, period, getPeriodBlocks, memberGrade]);
 
   function updateEntry(index: number, next: DayEntry) {
     const updated = entries.slice();
@@ -272,7 +279,7 @@ export function PeriodScreen({
   const week2 = entries.slice(7, 14);
 
   return (
-    <div className="flex flex-col gap-4 p-4 pb-28 text-slate-100">
+    <div className="flex flex-col gap-3 p-2 pb-28 text-slate-100">
       <div className="flex items-center justify-between">
         <button
           type="button"
@@ -299,7 +306,7 @@ export function PeriodScreen({
       </div>
 
       <div className="flex flex-col gap-1">
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-0.5">
           {week1.map((entry) => (
             <DayCell
               key={entry.date}
@@ -314,7 +321,7 @@ export function PeriodScreen({
             />
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-0.5">
           {week2.map((entry) => (
             <DayCell
               key={entry.date}

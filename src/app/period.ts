@@ -1,5 +1,6 @@
 import type { Period, PayYear } from "../data/schema";
 import { addDays, scheduledHoursOn } from "../engine/schedule";
+import { nextGradeUp } from "./stepProgression";
 import type {
   HourBlock,
   LineItem,
@@ -7,10 +8,10 @@ import type {
   ShiftLetter,
 } from "../engine/types";
 
-// F1 is never a valid ride-up target (step-up always covers a *higher*
-// grade), so it can't be the default grade for a step-up entry the UI's
-// grade picker (which only lists F2+) hasn't been touched yet.
-const DEFAULT_STEP_UP_GRADE: PayGrade = "F2";
+// Fallback only for when the member's own grade isn't known yet (e.g. data
+// saved before Setup started capturing grade). Once known, step-up always
+// defaults to the grade directly above the member's own (nextGradeUp).
+const FALLBACK_STEP_UP_GRADE: PayGrade = "F2";
 
 /** The standard holiday-off entitlement — 12 hrs, whether or not any of it
  * gets worked (docs/BUILD_PLAN.md Appendix). */
@@ -80,6 +81,7 @@ function defaultEntry(
   shift: ShiftLetter,
   date: string,
   holidayDates: ReadonlySet<string>,
+  defaultStepUpGrade: PayGrade,
 ): DayEntry {
   const scheduledHours = scheduledHoursOn(year, shift, date);
   const isHoliday = holidayDates.has(date);
@@ -91,7 +93,7 @@ function defaultEntry(
       isHoliday,
       type: "regular",
       hours: 0,
-      grade: DEFAULT_STEP_UP_GRADE,
+      grade: defaultStepUpGrade,
       holidayHoursWorked: scheduledHours,
     };
   }
@@ -102,7 +104,7 @@ function defaultEntry(
       isHoliday,
       type: "regular",
       hours: scheduledHours,
-      grade: DEFAULT_STEP_UP_GRADE,
+      grade: defaultStepUpGrade,
       holidayHoursWorked: 0,
     };
   }
@@ -112,19 +114,31 @@ function defaultEntry(
     isHoliday,
     type: "off",
     hours: 0,
-    grade: DEFAULT_STEP_UP_GRADE,
+    grade: defaultStepUpGrade,
     holidayHoursWorked: 0,
   };
 }
 
+/**
+ * @param memberGrade The member's own current grade (Setup), used only to
+ * default a step-up entry's grade to the one directly above it — Step 0 of
+ * the covered grade, per docs/PAY_PLAN.md, regardless of the member's own
+ * step within their grade. Falls back to F2 if not yet known (e.g. data
+ * saved before Setup captured grade) or if the member is already at the
+ * year's top grade.
+ */
 export function defaultDayEntries(
   year: PayYear,
   shift: ShiftLetter,
   period: Period,
+  memberGrade?: PayGrade | null,
 ): DayEntry[] {
   const holidayDates = new Set(year.holidays.map((h) => h.date));
+  const defaultStepUpGrade =
+    (memberGrade ? nextGradeUp(year, memberGrade) : null) ??
+    FALLBACK_STEP_UP_GRADE;
   return datesInPeriod(period).map((date) =>
-    defaultEntry(year, shift, date, holidayDates),
+    defaultEntry(year, shift, date, holidayDates, defaultStepUpGrade),
   );
 }
 
@@ -181,8 +195,9 @@ export function blocksToEntries(
   shift: ShiftLetter,
   period: Period,
   blocks: HourBlock[],
+  memberGrade?: PayGrade | null,
 ): DayEntry[] {
-  const defaults = defaultDayEntries(year, shift, period);
+  const defaults = defaultDayEntries(year, shift, period, memberGrade);
   const blocksByDate = new Map<string, HourBlock[]>();
   for (const block of blocks) {
     const existing = blocksByDate.get(block.date);

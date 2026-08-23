@@ -64,13 +64,18 @@ export const profileSchema = z.object({
  * again from scratch.
  */
 export const progressionSchema = z.object({
+  /** Always captured once Setup is completed, whether or not the member
+   * enters a step date — also drives step-up's default ride-up target
+   * (the grade immediately above this one). */
   grade: payGrade,
   /** Hire date, or most recent promotion date if later — whichever the
-   * member's next step actually lands on. */
-  anniversaryDate: isoDate,
+   * member's next step actually lands on. Null if not entered — grade is
+   * still captured either way. */
+  anniversaryDate: isoDate.nullable(),
   /** Whether the member confirmed they're on track for the projected
    * step (civil-service progression is "for employees in good
-   * standing," so this isn't automatic). */
+   * standing," so this isn't automatic). Meaningless when
+   * anniversaryDate is null. */
   receivingStep: z.boolean(),
 });
 
