@@ -8,6 +8,7 @@ describe("effectiveRate", () => {
     rateSegments: [
       { effectiveFrom: "2026-09-26", hourlyRate: 26.8173, incentiveTotal: 0 },
     ],
+    longevityAnnual: 0,
   };
 
   it("returns base + incentive for a single-segment profile", () => {
@@ -26,6 +27,7 @@ describe("effectiveRate", () => {
           incentiveTotal: 0.625,
         },
       ],
+      longevityAnnual: 0,
     };
     expect(effectiveRate(withIncentive, "2027-01-01")).toBeCloseTo(27.4423);
   });
@@ -41,6 +43,7 @@ describe("effectiveRate", () => {
           incentiveTotal: 0,
         },
       ],
+      longevityAnnual: 0,
     };
     expect(effectiveRate(splitProfile, "2027-03-31")).toBeCloseTo(26.8173);
     expect(effectiveRate(splitProfile, "2027-04-01")).toBeCloseTo(27.621819);
@@ -58,6 +61,7 @@ describe("effectiveRate", () => {
         },
         { effectiveFrom: "2026-09-26", hourlyRate: 26.8173, incentiveTotal: 0 },
       ],
+      longevityAnnual: 0,
     };
     expect(effectiveRate(outOfOrder, "2027-03-31")).toBeCloseTo(26.8173);
     expect(effectiveRate(outOfOrder, "2027-04-01")).toBeCloseTo(27.621819);

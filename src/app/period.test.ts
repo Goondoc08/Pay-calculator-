@@ -104,6 +104,7 @@ describe("entriesToBlocks / blocksToEntries round-trip", () => {
           incentiveTotal: 0,
         },
       ],
+      longevityAnnual: 0,
     };
     const entries = defaultDayEntries(year, "A", period);
     const blocks = entriesToBlocks(entries);
@@ -111,11 +112,11 @@ describe("entriesToBlocks / blocksToEntries round-trip", () => {
     expect(result.gross).toBeGreaterThan(0);
   });
 
-  it("splits a partial holiday holdover into holidayWorked + leftover holidayObserved", () => {
-    // Confirmed directly: working part of the 12-hr entitlement (e.g. a
-    // 2-hr late-call holdover) pays worked hours at 1.5x AND the
-    // remaining entitlement at straight time — not yet checked against a
-    // real paystub (docs/BUILD_PLAN.md Phase 06).
+  it("splits a partial holiday holdover into 2 RG + 2 HW + 10 HO", () => {
+    // A 2-hr late-call holdover pays those 2 hrs as ordinary regular time,
+    // ALSO earns a 2-hr HW premium on top, and still pays the remaining 10
+    // hrs of entitlement as HO — exactly as described by the member, and
+    // matching the workbooks' `J*(r) + HO*(r) + HW*(r)*1.5`.
     const period = year.periods[4];
     const entries = defaultDayEntries(year, "A", period).map((e) =>
       e.date === "2026-11-26" ? { ...e, holidayHoursWorked: 2 } : e,
@@ -123,6 +124,7 @@ describe("entriesToBlocks / blocksToEntries round-trip", () => {
     const blocks = entriesToBlocks(entries);
     const thanksgivingBlocks = blocks.filter((b) => b.date === "2026-11-26");
     expect(thanksgivingBlocks).toEqual([
+      { date: "2026-11-26", type: "regular", hours: 2, destination: "cash" },
       {
         date: "2026-11-26",
         type: "holidayWorked",
@@ -148,25 +150,20 @@ describe("entriesToBlocks / blocksToEntries round-trip", () => {
     expect(roundTripped).toEqual(entries);
   });
 
-  it("caps the holiday-worked premium at 12 hrs — a full 24-hr shift is 12 HW + 12 RG", () => {
-    // Confirmed directly: working more than the 12-hr entitlement doesn't
-    // earn more premium — the excess just reverts to an ordinary regular
-    // day (and counts toward the 106-hr cap like any other regular hours,
-    // unlike the capped HW portion which stays excluded).
+  it("caps the HW premium at 12 hrs — a full 24-hr holiday is 24 RG + 12 HW", () => {
+    // Working past the 12-hr entitlement earns no further premium, but the
+    // hours are still paid as ordinary regular time (and still count toward
+    // the 106-hr cap). Verified against a real Christmas paystub: RG 106 hrs
+    // and HW 36 hrs (3 holidays x 12) summing to the stated gross.
     const period = year.periods[4];
     const entries = defaultDayEntries(year, "A", period); // default: fully worked
     const blocks = entriesToBlocks(entries);
     const thanksgivingBlocks = blocks.filter((b) => b.date === "2026-11-26");
     expect(thanksgivingBlocks).toEqual([
+      { date: "2026-11-26", type: "regular", hours: 24, destination: "cash" },
       {
         date: "2026-11-26",
         type: "holidayWorked",
-        hours: 12,
-        destination: "cash",
-      },
-      {
-        date: "2026-11-26",
-        type: "regular",
         hours: 12,
         destination: "cash",
       },
@@ -181,10 +178,11 @@ describe("entriesToBlocks / blocksToEntries round-trip", () => {
           incentiveTotal: 0,
         },
       ],
+      longevityAnnual: 0,
     };
     const gross = computePeriod(year, profile, thanksgivingBlocks).gross;
-    // 12 hrs @ 1.5x + 12 hrs @ 1x (no OT — only 24 hrs, nowhere near 106).
-    expect(gross).toBeCloseTo(12 * 1.5 * 26.8173 + 12 * 26.8173, 4);
+    // 24 hrs straight + a 12-hr premium adder (no OT — nowhere near 106).
+    expect(gross).toBeCloseTo(24 * 26.8173 + 12 * 1.5 * 26.8173, 4);
   });
 
   it("round-trips a fully-worked holiday past the 12-hr cap", () => {
@@ -210,15 +208,10 @@ describe("entriesToBlocks / blocksToEntries round-trip", () => {
     const blocks = entriesToBlocks(entries);
     const thanksgivingBlocks = blocks.filter((b) => b.date === "2026-11-26");
     expect(thanksgivingBlocks).toEqual([
+      { date: "2026-11-26", type: "regular", hours: 24, destination: "comp" },
       {
         date: "2026-11-26",
         type: "holidayWorked",
-        hours: 12,
-        destination: "comp",
-      },
-      {
-        date: "2026-11-26",
-        type: "regular",
         hours: 12,
         destination: "comp",
       },
@@ -233,6 +226,7 @@ describe("entriesToBlocks / blocksToEntries round-trip", () => {
           incentiveTotal: 0,
         },
       ],
+      longevityAnnual: 0,
     };
     const thanksgivingGross = computePeriod(
       year,

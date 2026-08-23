@@ -19,6 +19,8 @@ export interface FixturePeriod {
 export interface FixtureProfile {
   rate: number;
   incentive: number;
+  /** The workbook's "Last Longevity" (N3) input, folded into FLSA premium. */
+  longevity: number;
   anniversaryDate: string | null;
   anniversaryNewRate: number | null;
 }
@@ -42,24 +44,30 @@ export function profileFromFixture(
       incentiveTotal: fixtureProfile.incentive,
     });
   }
-  return { shift, rateSegments };
+  return {
+    shift,
+    rateSegments,
+    longevityAnnual: fixtureProfile.longevity,
+  };
 }
 
-/** The standard holiday-off entitlement, and the cap on the holiday-worked
- * premium itself — confirmed directly: working more than 12 hrs of a
- * holiday doesn't earn more premium, the excess is just an ordinary
- * regular day past that point (src/app/period.ts carries the same rule
- * for the interface). */
+/** The holiday entitlement per holiday date, and the cap on the HW premium
+ * (src/app/period.ts carries the same rule for the interface). */
 const HOLIDAY_ENTITLEMENT_HOURS = 12;
 
 /**
- * Reconstructs typed hour blocks from the workbook's own worked-day cells:
- * a worked day on a holiday date is holiday-worked (capped at the 12-hr
- * entitlement; any excess is an ordinary regular block); a holiday date
- * the shift didn't work (and that isn't already a worked-day cell) is a
- * 12-hr holiday-observed block, matching how the sheet auto-populates
- * HO/HW from the schedule intersected with the holiday calendar
- * (docs/BUILD_PLAN.md Appendix).
+ * Reconstructs typed hour blocks from the workbook's own worked-day cells,
+ * mirroring its straight-pay formula
+ * `J*(rate+inc) + HO*(rate+inc) + HW*(rate+inc)*1.5`:
+ *
+ * - every worked-day cell becomes a `regular` block (the sheet's J column
+ *   includes holiday shifts, so those hours are ordinary paid hours and
+ *   count toward the 106-hr cap);
+ * - a worked day landing on a holiday date ALSO gets a `holidayWorked`
+ *   premium adder, capped at the 12-hr entitlement;
+ * - a holiday date the shift didn't work becomes a 12-hr `holidayObserved`
+ *   adder, matching how the sheet auto-populates HO from the schedule
+ *   intersected with the holiday calendar.
  */
 export function blocksFromFixturePeriod(
   year: PayYear,
@@ -70,6 +78,7 @@ export function blocksFromFixturePeriod(
   const blocks: HourBlock[] = [];
 
   for (const [date, hours] of Object.entries(period.dayHours)) {
+    blocks.push({ date, type: "regular", hours, destination: "cash" });
     if (holidayDates.has(date)) {
       const hwHours = Math.min(hours, HOLIDAY_ENTITLEMENT_HOURS);
       if (hwHours > 0) {
@@ -80,17 +89,6 @@ export function blocksFromFixturePeriod(
           destination: "cash",
         });
       }
-      const excessRegularHours = Math.max(0, hours - HOLIDAY_ENTITLEMENT_HOURS);
-      if (excessRegularHours > 0) {
-        blocks.push({
-          date,
-          type: "regular",
-          hours: excessRegularHours,
-          destination: "cash",
-        });
-      }
-    } else {
-      blocks.push({ date, type: "regular", hours, destination: "cash" });
     }
   }
 

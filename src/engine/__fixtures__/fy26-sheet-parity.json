@@ -5,6 +5,7 @@
       "profile": {
         "rate": 39.24,
         "incentive": 3.2973,
+        "longevity": 552,
         "anniversaryDate": null,
         "anniversaryNewRate": null
       },
@@ -537,6 +538,7 @@
       "profile": {
         "rate": 39.24,
         "incentive": 3.2973,
+        "longevity": 552,
         "anniversaryDate": null,
         "anniversaryNewRate": null
       },
@@ -1070,6 +1072,7 @@
       "profile": {
         "rate": 39.24,
         "incentive": 3.2973,
+        "longevity": 552,
         "anniversaryDate": null,
         "anniversaryNewRate": null
       },

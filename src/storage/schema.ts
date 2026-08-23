@@ -53,6 +53,13 @@ const hourBlockSchema = z.discriminatedUnion("type", [
 export const profileSchema = z.object({
   shift: shiftLetter,
   rateSegments: z.array(rateSegmentSchema).min(1),
+  /**
+   * Last annual longevity payoff (LP pay code). Defaults to 0 so profiles
+   * saved before this field existed still parse — a member who hasn't
+   * entered it simply gets no longevity term in their FLSA premium, which
+   * is the old (slightly low) behaviour rather than a validation failure.
+   */
+  longevityAnnual: z.number().nonnegative().default(0),
 });
 
 /**

@@ -43,6 +43,8 @@ function migrateV0toV1(legacy: LegacyV0Shape): StoredDataV1 {
                 incentiveTotal: legacy.incentiveTotal ?? 0,
               },
             ],
+            // Predates the field; Setup will prompt for it.
+            longevityAnnual: 0,
           }
         : null,
     periodEntries: (legacy.periodEntries ??

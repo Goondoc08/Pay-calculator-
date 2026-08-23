@@ -11,6 +11,7 @@ const flatProfile: Profile = {
   rateSegments: [
     { effectiveFrom: "2026-09-26", hourlyRate: 26.8173, incentiveTotal: 0 },
   ],
+  longevityAnnual: 0,
 };
 
 describe("computePeriod", () => {
@@ -90,16 +91,17 @@ describe("computePeriod", () => {
     expect(result.gross).toBeCloseTo(expectedGross, 4);
   });
 
-  it("holiday worked pays 1.5x the effective rate and is excluded from the cap", () => {
-    // 96 regular + 24 holiday-worked = 120 total, but only 96 count toward
-    // the cap, so OT is 0 — this is the case that resolves a real check's
-    // $0 FLSA premium despite a 120-hour total (docs/BUILD_PLAN.md §5).
+  it("holiday worked is a 1.5x adder; its worked hours still count toward the cap", () => {
+    // A worked holiday is 24 RG (which DO count toward the cap) plus a 12-hr
+    // HW premium adder layered on top — the adder is neither hours on the
+    // clock nor cap-counting. 120 worked hours, 14 over the 106 cap.
     const blocks: HourBlock[] = [
       { date: "2026-11-21", type: "regular", hours: 24, destination: "cash" },
+      { date: "2026-11-26", type: "regular", hours: 24, destination: "cash" },
       {
         date: "2026-11-26",
         type: "holidayWorked",
-        hours: 24,
+        hours: 12,
         destination: "cash",
       },
       { date: "2026-12-02", type: "regular", hours: 24, destination: "cash" },
@@ -108,12 +110,13 @@ describe("computePeriod", () => {
     ];
     const result = computePeriod(year, flatProfile, blocks);
     expect(result.totalHours).toBe(120);
-    expect(result.otHours).toBe(0);
-    const expectedGross = 96 * 26.8173 + 24 * 1.5 * 26.8173;
+    expect(result.otHours).toBe(14);
+    const expectedGross =
+      120 * 26.8173 + 12 * 1.5 * 26.8173 + 14 * 0.5 * 26.8173;
     expect(result.gross).toBeCloseTo(expectedGross, 4);
   });
 
-  it("holiday observed pays 12 hrs straight and doesn't count toward the cap", () => {
+  it("holiday observed pays straight time but is not hours on the clock", () => {
     const blocks: HourBlock[] = [
       {
         date: "2027-01-18",
@@ -123,18 +126,35 @@ describe("computePeriod", () => {
       },
     ];
     const result = computePeriod(year, flatProfile, blocks);
-    expect(result.totalHours).toBe(12);
+    expect(result.totalHours).toBe(0);
     expect(result.otHours).toBe(0);
     expect(result.gross).toBeCloseTo(12 * 26.8173, 4);
+  });
+
+  it("folds the annual longevity payoff into the FLSA premium", () => {
+    // FLSA requires non-discretionary pay in the regular rate even when it's
+    // disbursed separately. Verified against a real check: without this term
+    // the engine came in $0.30 light on a 6-hr-OT period.
+    const blocks: HourBlock[] = Array.from({ length: 5 }, (_, i) => ({
+      date: `2026-09-2${i + 1}`,
+      type: "regular" as const,
+      hours: 24,
+      destination: "cash" as const,
+    }));
+    const withLongevity = { ...flatProfile, longevityAnnual: 284 };
+    const base = computePeriod(year, flatProfile, blocks).gross;
+    const bumped = computePeriod(year, withLongevity, blocks).gross;
+    expect(bumped - base).toBeCloseTo(14 * 0.5 * (284 / 2912), 6);
   });
 
   it("comped or accrued hours contribute $0 to this check's gross", () => {
     const blocks: HourBlock[] = [
       { date: "2026-09-27", type: "regular", hours: 24, destination: "comp" },
+      { date: "2026-11-26", type: "regular", hours: 24, destination: "comp" },
       {
         date: "2026-11-26",
         type: "holidayWorked",
-        hours: 24,
+        hours: 12,
         destination: "comp",
       },
       {
@@ -145,7 +165,7 @@ describe("computePeriod", () => {
       },
     ];
     const result = computePeriod(year, flatProfile, blocks);
-    expect(result.totalHours).toBe(60);
+    expect(result.totalHours).toBe(48);
     expect(result.gross).toBe(0);
   });
 
@@ -164,6 +184,7 @@ describe("computePeriod", () => {
           incentiveTotal: 0,
         },
       ],
+      longevityAnnual: 0,
     };
     const blocks: HourBlock[] = [
       "2027-03-27",

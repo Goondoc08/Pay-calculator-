@@ -85,6 +85,10 @@ export function SetupScreen({
   const [bilingual, setBilingual] = useState(false);
   const [assignment, setAssignment] = useState(NONE);
 
+  const [longevity, setLongevity] = useState(
+    profile?.longevityAnnual ? String(profile.longevityAnnual) : "",
+  );
+
   const [anniversaryDate, setAnniversaryDate] = useState(
     progression?.anniversaryDate ?? "",
   );
@@ -143,6 +147,9 @@ export function SetupScreen({
             ]
           : []),
       ],
+      longevityAnnual: Number.isFinite(Number(longevity))
+        ? Math.max(0, Number(longevity))
+        : 0,
     };
     setProfile(newProfile);
     setProgression({
@@ -192,6 +199,23 @@ export function SetupScreen({
           onChange={(e) => setHourlyRate(e.target.value)}
           placeholder="26.8173"
         />
+      </label>
+
+      <label className="flex flex-col gap-1 text-sm text-slate-300">
+        Last longevity payoff (LP)
+        <input
+          className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100"
+          type="number"
+          step="0.01"
+          inputMode="decimal"
+          value={longevity}
+          onChange={(e) => setLongevity(e.target.value)}
+          placeholder="284.00"
+        />
+        <span className="text-xs text-slate-500">
+          From your October longevity check. Paid separately, but FLSA folds it
+          into the overtime rate, so it slightly raises OT periods.
+        </span>
       </label>
 
       <div className="flex flex-col gap-3 rounded-lg border border-slate-800 p-3">

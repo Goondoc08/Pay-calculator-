@@ -22,6 +22,7 @@ const sample: StoredDataV1 = {
     rateSegments: [
       { effectiveFrom: "2026-09-26", hourlyRate: 26.8173, incentiveTotal: 0 },
     ],
+    longevityAnnual: 0,
   },
   periodEntries: {
     "FY27:1": [
@@ -123,6 +124,7 @@ describe("load", () => {
           incentiveTotal: 0.625,
         },
       ],
+      longevityAnnual: 0,
     });
     expect(result.data.periodEntries["FY27:1"]).toHaveLength(1);
   });

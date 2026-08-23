@@ -31,6 +31,7 @@ describe("sheet parity — FY27, 26 periods x 3 shifts", () => {
             profile: {
               rate: number;
               incentive: number;
+              longevity: number;
               anniversaryDate: string | null;
               anniversaryNewRate: number | null;
             };

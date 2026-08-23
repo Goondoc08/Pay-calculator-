@@ -27,6 +27,16 @@ export interface Profile {
   shift: ShiftLetter;
   /** Sorted ascending by effectiveFrom. Must have at least one segment. */
   rateSegments: RateSegment[];
+  /**
+   * Last annual longevity payoff (the LP pay code), in dollars. Paid on its
+   * own check each October, but FLSA still requires this non-discretionary
+   * pay to be folded into the "regular rate" for overtime, so it adds
+   * `(longevityAnnual / 2912) x otHours x 0.5` to every period's FLSA
+   * premium. Verified against a real check: omitting it left the engine
+   * $0.30 light on a 6-hr-OT period. Both workbooks carry it as the
+   * "Last Longevity" input cell (N3) and use exactly this formula.
+   */
+  longevityAnnual: number;
 }
 
 interface BlockBase {
@@ -53,12 +63,29 @@ export interface TifmasBlock extends BlockBase {
   destination: Destination;
 }
 
+/**
+ * The HW pay code — a 1.5x premium ADDER, not a replacement. Hours actually
+ * worked on a holiday are ALSO paid as an ordinary `regular` block (and count
+ * toward the 106-hr cap like any other worked hours); this block sits on top
+ * of that. Capped at 12 hrs per holiday date.
+ *
+ * Verified against a real check (12/20/2025-01/02/2026): RG 106 hrs =
+ * $4050.75 and HW 36 hrs = $2063.58 are priced off the same effective rate,
+ * and RG + HW is exactly the stated gross. Both workbooks compute straight
+ * pay as `J*(rate+inc) + HO*(rate+inc) + HW*(rate+inc)*1.5`, where J already
+ * includes the worked holiday hours.
+ */
 export interface HolidayWorkedBlock extends BlockBase {
   type: "holidayWorked";
   hours: number;
   destination: Destination;
 }
 
+/**
+ * The HO pay code — the unworked remainder of the 12-hr entitlement, paid
+ * straight at the effective rate. Also an adder, and never counts toward the
+ * 106-hr cap (no hours were actually worked).
+ */
 export interface HolidayObservedBlock extends BlockBase {
   type: "holidayObserved";
   hours: number;
@@ -87,6 +114,11 @@ export interface LineItem {
 }
 
 export interface PeriodResult {
+  /**
+   * Hours "on the clock" — worked hours plus PTO, matching the workbooks'
+   * "Total Hours" (J) column. Deliberately excludes the HO/HW premium
+   * adders, which are dollars layered on top rather than additional hours.
+   */
   totalHours: number;
   otHours: number;
   gross: number;

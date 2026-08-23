@@ -28,6 +28,7 @@ const sample: StoredDataV1 = {
         incentiveTotal: 0,
       },
     ],
+    longevityAnnual: 0,
   },
   periodEntries: {
     "FY27:5": [

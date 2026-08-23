@@ -64,7 +64,15 @@ function DayCell({
 
   if (entry.isHoliday) {
     const worked = Math.min(24, Math.max(0, entry.holidayHoursWorked));
+    // Worked hours pay as ordinary RG; the HW premium rides on top, capped
+    // at the 12-hr entitlement; whatever's left of the 12 pays as HO.
+    const hw = Math.min(worked, 12);
     const leftover = Math.max(0, 12 - worked);
+    const parts = [
+      worked > 0 && `${worked}RG`,
+      hw > 0 && `${hw}HW`,
+      leftover > 0 && `${leftover}HO`,
+    ].filter(Boolean) as string[];
     return (
       <div className="flex flex-col gap-0.5 rounded border border-amber-900/40 bg-amber-950/10 p-1">
         {dayLabel}
@@ -82,12 +90,15 @@ function DayCell({
             })
           }
         />
-        <p className="truncate text-[9px] leading-tight text-slate-500">
-          {worked > 0 &&
-            `${worked}HW${entry.holidayWorkedComped ? "(comp)" : ""}`}
-          {worked > 0 && leftover > 0 && "+"}
-          {leftover > 0 && `${leftover}HO`}
-          {worked === 0 && leftover === 0 && "—"}
+        {/* Each code on its own wrapping chip — "24RG+12HW" overflows a
+            portrait-width cell as a single run and gets clipped. */}
+        <p className="flex flex-wrap gap-x-0.5 text-[9px] leading-tight text-slate-500">
+          {parts.length > 0 ? (
+            parts.map((part) => <span key={part}>{part}</span>)
+          ) : (
+            <span>—</span>
+          )}
+          {worked > 0 && entry.holidayWorkedComped && <span>(comp)</span>}
         </p>
         {worked > 0 && (
           <label className="flex items-center gap-0.5 text-[9px] leading-tight text-slate-400">

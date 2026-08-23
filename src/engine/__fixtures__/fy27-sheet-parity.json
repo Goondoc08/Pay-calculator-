@@ -5,6 +5,7 @@
       "profile": {
         "rate": 26.8173,
         "incentive": 0,
+        "longevity": 0,
         "anniversaryDate": "2027-04-01",
         "anniversaryNewRate": 27.621819
       },
@@ -501,6 +502,7 @@
       "profile": {
         "rate": 26.8173,
         "incentive": 0,
+        "longevity": 0,
         "anniversaryDate": "2027-04-01",
         "anniversaryNewRate": 27.621819
       },
@@ -996,6 +998,7 @@
       "profile": {
         "rate": 26.8173,
         "incentive": 0,
+        "longevity": 0,
         "anniversaryDate": "2027-04-01",
         "anniversaryNewRate": 27.621819
       },

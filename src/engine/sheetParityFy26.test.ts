@@ -2,36 +2,22 @@ import { describe, expect, it } from "vitest";
 import fy26Raw from "../data/fy26.json";
 import fixtureRaw from "./__fixtures__/fy26-sheet-parity.json";
 import { parsePayYear } from "../data/schema";
-import {
-  KNOWN_DIVERGENCES_FY26,
-  longevityAdjustment,
-} from "./knownDivergencesFy26";
+import { expectedFy26Divergence } from "./knownDivergencesFy26";
 import { computePeriod } from "./period";
-import { addDays } from "./schedule";
 import { blocksFromFixturePeriod, profileFromFixture } from "./sheetParity";
 import type { ShiftLetter } from "./types";
 
 /**
- * FY26's counterpart to sheetParity.test.ts. Every non-holiday period
- * matches the sheet exactly once the sheet's own longevity-in-FLSA term is
- * accounted for (a closed-form adjustment, not a lookup — see
- * knownDivergencesFy26.ts); every holiday period matches a locked-in
- * observed divergence. 84 comparisons (28 periods x 3 shifts) — more than
- * FY27's 78 because FY26 is the longer bridge year (BUILD_PLAN.md).
+ * FY26's counterpart to sheetParity.test.ts. Every one of the 84 comparisons
+ * (28 periods x 3 shifts) is either exact to the cent or exactly predicted by
+ * `expectedFy26Divergence` — a closed-form account of three specific defects
+ * in the workbook, with no observed-magic-number entries and no residual
+ * bucket. See knownDivergencesFy26.ts for what those three defects are.
  */
 describe("sheet parity — FY26, 28 periods x 3 shifts", () => {
   const year = parsePayYear(fy26Raw);
   const holidayDates = new Set(year.holidays.map((h) => h.date));
   const shiftLetters: ShiftLetter[] = ["A", "B", "C"];
-
-  function periodContainsHoliday(start: string, end: string): boolean {
-    let cur = start;
-    while (cur <= end) {
-      if (holidayDates.has(cur)) return true;
-      cur = addDays(cur, 1);
-    }
-    return false;
-  }
 
   let comparisons = 0;
 
@@ -44,6 +30,7 @@ describe("sheet parity — FY26, 28 periods x 3 shifts", () => {
             profile: {
               rate: number;
               incentive: number;
+              longevity: number;
               anniversaryDate: string | null;
               anniversaryNewRate: number | null;
             };
@@ -80,21 +67,16 @@ describe("sheet parity — FY26, 28 periods x 3 shifts", () => {
           const result = computePeriod(year, profile, blocks);
           const diff = result.gross - period.summary.totalPay;
 
-          const known = KNOWN_DIVERGENCES_FY26[shift][period.n];
-          if (known) {
-            expect(diff).toBeCloseTo(known.diff, 2);
-          } else if (periodContainsHoliday(period.start, period.end)) {
-            throw new Error(
-              `Period ${period.n} contains a holiday but has no KNOWN_DIVERGENCES_FY26 entry — ` +
-                `either it now matches the sheet exactly (remove this assumption) or a new ` +
-                `divergence appeared (diff=${diff.toFixed(4)}, add it to the table).`,
-            );
-          } else {
-            expect(diff).toBeCloseTo(
-              longevityAdjustment(period.summary.otHours),
-              2,
-            );
-          }
+          const expected = expectedFy26Divergence({
+            periodN: period.n,
+            otHours: period.summary.otHours,
+            blocks,
+            hourlyRate: shiftFixture.profile.rate,
+            incentive: shiftFixture.profile.incentive,
+            longevity: shiftFixture.profile.longevity,
+          });
+
+          expect(diff).toBeCloseTo(expected, 2);
         });
       }
     });

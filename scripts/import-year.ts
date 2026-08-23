@@ -43,6 +43,7 @@ const COL = {
   totalPay: 14, // N, summary row
   rate: 12, // L, row 3 (profile setup block)
   incentive: 13, // M, row 3
+  longevity: 14, // N, row 3 — "Last Longevity" (the LP pay code amount)
   anniversaryDate: 16, // P, row 2
   anniversaryNewRate: 16, // P, row 3
 };
@@ -72,6 +73,7 @@ interface ShiftExtract {
   profile: {
     rate: number;
     incentive: number;
+    longevity: number;
     anniversaryDate: string | null;
     anniversaryNewRate: number | null;
   };
@@ -121,6 +123,7 @@ async function extractShift(
 
   const rate = excelNumber(ws.getCell(3, COL.rate).value);
   const incentive = excelNumber(ws.getCell(3, COL.incentive).value);
+  const longevity = excelNumber(ws.getCell(3, COL.longevity).value);
   const anniversaryDate = excelDateToIso(
     ws.getCell(2, COL.anniversaryDate).value,
   );
@@ -187,7 +190,13 @@ async function extractShift(
   }
 
   return {
-    profile: { rate, incentive, anniversaryDate, anniversaryNewRate },
+    profile: {
+      rate,
+      incentive,
+      longevity,
+      anniversaryDate,
+      anniversaryNewRate,
+    },
     periods,
     holidayCells,
   };

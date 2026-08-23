@@ -28,15 +28,34 @@ function rateForBlock(
   return effectiveRate(profile, block.date);
 }
 
-/** Cap-counting blocks: only hours actually worked count toward the 106-hr
- * FLSA threshold. PTO and holiday hours (worked or observed) never count,
- * confirmed directly against real checks (docs/BUILD_PLAN.md §Appendix). */
+/**
+ * Hours used to annualize the longevity payoff into the FLSA regular rate:
+ * 52 weeks x 56 hrs on a 48/96 rotation. Both workbooks divide by this
+ * (`$N$3/2912`); FY26's first two periods say 2756 instead, a typo the sheet
+ * itself corrects from its third period onward.
+ */
+const FLSA_ANNUALIZATION_HOURS = 2912;
+
+/**
+ * Cap-counting blocks: hours actually worked. PTO doesn't count (not worked),
+ * and neither do the HO/HW premium adders — but the underlying hours worked
+ * on a holiday DO, because they arrive as ordinary `regular` blocks.
+ *
+ * This mirrors the workbooks' `K = J - PTO - 106`, where J is every hour
+ * entered on the calendar (holiday shifts included) and the HO/HW columns
+ * live outside J entirely.
+ */
 function countsTowardCap(block: HourBlock): boolean {
   return (
     block.type === "regular" ||
     block.type === "stepUp" ||
     block.type === "tifmas"
   );
+}
+
+/** Hours "on the clock" for the Total Hours display — worked plus PTO. */
+function countsTowardTotalHours(block: HourBlock): boolean {
+  return countsTowardCap(block) || block.type === "pto";
 }
 
 /**
@@ -72,8 +91,16 @@ export function computePeriod(
   const blendedCapRate =
     totalCapHours > 0 ? totalCapDollars / totalCapHours : 0;
 
+  // FLSA requires non-discretionary pay to sit in the "regular rate" even
+  // when it's disbursed separately, so the annual longevity payoff is
+  // annualized over 2912 hrs and layered into the half-time premium — the
+  // `+ ($N$3/2912*K*0.5)` term both workbooks carry.
+  const longevityPremiumRate =
+    0.5 * (profile.longevityAnnual / FLSA_ANNUALIZATION_HOURS);
+  const flsaPremiumRate = 0.5 * blendedCapRate + longevityPremiumRate;
+
   for (const block of sorted) {
-    totalHours += block.hours;
+    if (countsTowardTotalHours(block)) totalHours += block.hours;
     const rate = rateForBlock(payYear, profile, block);
     const paid = block.type === "pto" || block.destination === "cash";
 
@@ -142,13 +169,13 @@ export function computePeriod(
     });
 
     if (overInBlock > 0) {
-      const premiumAmount = paid ? overInBlock * 0.5 * blendedCapRate : 0;
+      const premiumAmount = paid ? overInBlock * flsaPremiumRate : 0;
       gross += premiumAmount;
       lineItems.push({
         label: "FLSA premium",
         date: block.date,
         hours: overInBlock,
-        rate: 0.5 * blendedCapRate,
+        rate: flsaPremiumRate,
         amount: premiumAmount,
       });
     }
