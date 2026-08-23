@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAppData } from "../app/AppData";
 import {
   aggregateLineItems,
@@ -251,17 +251,39 @@ export function PeriodScreen({
   const [breakdownOpen, setBreakdownOpen] = useState(false);
   const memberGrade = progression?.grade ?? null;
 
-  const entries = useMemo<DayEntry[]>(() => {
+  // Entries are local editing state, loaded once per period (not re-derived
+  // from saved blocks after every keystroke): entriesToBlocks() drops a
+  // block once its hours hit 0, which happens for an instant while
+  // backspacing a number to retype it (e.g. "24" -> "" -> "16"). Re-reading
+  // that lossy round trip back through blocksToEntries() on every edit
+  // flipped the day's type to "Off" mid-edit and the hours field vanished
+  // under the user's cursor. Saving still happens on every edit (below);
+  // just not reading back.
+  const [entries, setEntries] = useState<DayEntry[]>(() => {
     const saved = getPeriodBlocks(year.id, period.n);
-    if (saved.length > 0) {
-      return blocksToEntries(year, profile.shift, period, saved, memberGrade);
-    }
-    return defaultDayEntries(year, profile.shift, period, memberGrade);
-  }, [year, profile.shift, period, getPeriodBlocks, memberGrade]);
+    return saved.length > 0
+      ? blocksToEntries(year, profile.shift, period, saved, memberGrade)
+      : defaultDayEntries(year, profile.shift, period, memberGrade);
+  });
+
+  useEffect(() => {
+    const saved = getPeriodBlocks(year.id, period.n);
+    setEntries(
+      saved.length > 0
+        ? blocksToEntries(year, profile.shift, period, saved, memberGrade)
+        : defaultDayEntries(year, profile.shift, period, memberGrade),
+    );
+    // Deliberately excludes getPeriodBlocks: it's a live snapshot of
+    // storage that changes on every save, and re-syncing from it here is
+    // exactly the round trip this fix removes. Re-sync only when the
+    // member switches to a genuinely different period/shift/year/grade.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year.id, period.n, profile.shift, memberGrade]);
 
   function updateEntry(index: number, next: DayEntry) {
     const updated = entries.slice();
     updated[index] = next;
+    setEntries(updated);
     setPeriodBlocks(year.id, period.n, entriesToBlocks(updated));
   }
 
