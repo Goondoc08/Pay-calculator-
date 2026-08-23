@@ -208,11 +208,26 @@ export function SetupScreen({
 
   return (
     <div className="flex flex-col gap-5 p-4 text-ink">
-      <div>
-        <h1 className="text-xl font-semibold">Setup</h1>
-        <p className="mt-1 text-sm text-ink-muted">
-          One-time setup. Come back here whenever your step changes.
-        </p>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <h1 className="text-xl font-semibold">Setup</h1>
+          <p className="mt-1 text-sm text-ink-muted">
+            One-time setup. Come back here whenever your step changes.
+          </p>
+        </div>
+        {/* Only a real "back" when there's an existing profile to go back
+            to — on first-run (profile === null) App.tsx keeps Setup open
+            regardless of onDone, so a cancel button here would visibly do
+            nothing and just be confusing. */}
+        {profile && (
+          <button
+            type="button"
+            onClick={onDone}
+            className="shrink-0 rounded-md px-3 py-2 text-sm text-ink-muted"
+          >
+            ✕ Cancel
+          </button>
+        )}
       </div>
 
       <Select
