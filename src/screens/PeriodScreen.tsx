@@ -10,14 +10,12 @@ import {
 } from "../app/period";
 import type { PayYear, Period } from "../data/schema";
 import { computePeriod } from "../engine/period";
-import type { Destination, PayGrade, Profile } from "../engine/types";
+import type { PayGrade, Profile } from "../engine/types";
 
 const TYPE_LABELS: Record<DayEntryType, string> = {
   off: "Off",
   regular: "Regular",
   pto: "PTO",
-  holidayWorked: "Holiday worked",
-  holidayObserved: "Holiday observed",
   stepUp: "Step-up",
   tifmas: "TIFMAS",
 };
@@ -28,7 +26,12 @@ function weekdayName(iso: string): string {
   return DAY_NAMES[new Date(`${iso}T00:00:00Z`).getUTCDay()];
 }
 
-function DayRow({
+/**
+ * One calendar cell in the period grid — deliberately dense (closer to the
+ * sheet's own layout than a stack of cards) since that's what the day-to-day
+ * entry screen is compared against.
+ */
+function DayCell({
   entry,
   stepUpGrades,
   onChange,
@@ -37,92 +40,100 @@ function DayRow({
   stepUpGrades: PayGrade[];
   onChange: (next: DayEntry) => void;
 }) {
-  return (
-    <div className="flex flex-col gap-2 rounded-lg border border-slate-800 p-3">
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-slate-200">
-          {weekdayName(entry.date)} {entry.date.slice(5)}
-          {entry.isHoliday && (
-            <span className="ml-2 rounded bg-amber-900/50 px-1.5 py-0.5 text-xs text-amber-300">
-              holiday
-            </span>
-          )}
+  const dayLabel = (
+    <div className="flex items-baseline justify-between">
+      <span className="text-xs font-medium text-slate-300">
+        {weekdayName(entry.date)} {entry.date.slice(8)}
+      </span>
+      {entry.isHoliday && (
+        <span className="rounded bg-amber-900/50 px-1 text-[10px] leading-4 text-amber-300">
+          holiday
         </span>
-        {entry.scheduledHours > 0 && (
-          <span className="text-xs text-slate-500">
-            scheduled {entry.scheduledHours}h
-          </span>
-        )}
-      </div>
+      )}
+    </div>
+  );
 
-      <div className="flex flex-wrap items-center gap-2">
-        <select
-          className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
-          value={entry.type}
-          onChange={(e) => {
-            const type = e.target.value as DayEntryType;
-            const defaultHours =
-              type === "off"
-                ? 0
-                : type === "holidayObserved"
-                  ? 12
-                  : entry.scheduledHours || entry.hours || 24;
-            onChange({ ...entry, type, hours: defaultHours });
-          }}
-        >
-          {(Object.keys(TYPE_LABELS) as DayEntryType[]).map((t) => (
-            <option key={t} value={t}>
-              {TYPE_LABELS[t]}
-            </option>
-          ))}
-        </select>
-
-        {entry.type !== "off" && (
+  if (entry.isHoliday) {
+    const worked = Math.min(24, Math.max(0, entry.holidayHoursWorked));
+    const leftover = Math.max(0, 12 - worked);
+    return (
+      <div className="flex flex-col gap-1 rounded border border-amber-900/40 bg-amber-950/10 p-1.5">
+        {dayLabel}
+        <label className="flex items-center gap-1 text-[11px] text-slate-400">
+          worked
           <input
-            className="w-20 rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
+            className="w-12 rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-xs text-slate-100"
             type="number"
             min={0}
+            max={24}
             step="0.25"
-            value={entry.hours}
-            onChange={(e) =>
-              onChange({ ...entry, hours: Number(e.target.value) || 0 })
-            }
-          />
-        )}
-
-        {entry.type !== "off" && entry.type !== "pto" && (
-          <select
-            className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
-            value={entry.destination}
+            value={entry.holidayHoursWorked}
             onChange={(e) =>
               onChange({
                 ...entry,
-                destination: e.target.value as Destination,
+                holidayHoursWorked: Number(e.target.value) || 0,
               })
             }
-          >
-            <option value="cash">Cash</option>
-            <option value="comp">Comp</option>
-            <option value="accrue">Accrue</option>
-          </select>
-        )}
-
-        {entry.type === "stepUp" && (
-          <select
-            className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
-            value={entry.grade}
-            onChange={(e) =>
-              onChange({ ...entry, grade: e.target.value as PayGrade })
-            }
-          >
-            {stepUpGrades.map((g) => (
-              <option key={g} value={g}>
-                {g}
-              </option>
-            ))}
-          </select>
-        )}
+          />
+        </label>
+        <p className="text-[10px] leading-tight text-slate-500">
+          {worked > 0 && `${worked}h HW`}
+          {worked > 0 && leftover > 0 && " + "}
+          {leftover > 0 && `${leftover}h HO`}
+          {worked === 0 && leftover === 0 && "—"}
+        </p>
       </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-1 rounded border border-slate-800 p-1.5">
+      {dayLabel}
+      <select
+        className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-xs text-slate-100"
+        value={entry.type}
+        onChange={(e) => {
+          const type = e.target.value as DayEntryType;
+          const hours =
+            type === "off" ? 0 : entry.scheduledHours || entry.hours || 24;
+          onChange({ ...entry, type, hours });
+        }}
+      >
+        {(Object.keys(TYPE_LABELS) as DayEntryType[]).map((t) => (
+          <option key={t} value={t}>
+            {TYPE_LABELS[t]}
+          </option>
+        ))}
+      </select>
+
+      {entry.type !== "off" && (
+        <input
+          className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-xs text-slate-100"
+          type="number"
+          min={0}
+          step="0.25"
+          value={entry.hours}
+          onChange={(e) =>
+            onChange({ ...entry, hours: Number(e.target.value) || 0 })
+          }
+        />
+      )}
+
+      {entry.type === "stepUp" && (
+        <select
+          className="w-full rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-xs text-slate-100"
+          value={entry.grade}
+          onChange={(e) =>
+            onChange({ ...entry, grade: e.target.value as PayGrade })
+          }
+        >
+          {stepUpGrades.map((g) => (
+            <option key={g} value={g}>
+              {g}
+            </option>
+          ))}
+        </select>
+      )}
     </div>
   );
 }
@@ -257,6 +268,9 @@ export function PeriodScreen({
     (g) => g !== "F1",
   );
 
+  const week1 = entries.slice(0, 7);
+  const week2 = entries.slice(7, 14);
+
   return (
     <div className="flex flex-col gap-4 p-4 pb-28 text-slate-100">
       <div className="flex items-center justify-between">
@@ -284,15 +298,37 @@ export function PeriodScreen({
         </button>
       </div>
 
-      <div className="flex flex-col gap-2">
-        {entries.map((entry, i) => (
-          <DayRow
-            key={entry.date}
-            entry={entry}
-            stepUpGrades={stepUpGrades}
-            onChange={(next) => updateEntry(i, next)}
-          />
-        ))}
+      <div className="flex flex-col gap-1">
+        <div className="grid grid-cols-7 gap-1">
+          {week1.map((entry) => (
+            <DayCell
+              key={entry.date}
+              entry={entry}
+              stepUpGrades={stepUpGrades}
+              onChange={(next) =>
+                updateEntry(
+                  entries.findIndex((e) => e.date === entry.date),
+                  next,
+                )
+              }
+            />
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {week2.map((entry) => (
+            <DayCell
+              key={entry.date}
+              entry={entry}
+              stepUpGrades={stepUpGrades}
+              onChange={(next) =>
+                updateEntry(
+                  entries.findIndex((e) => e.date === entry.date),
+                  next,
+                )
+              }
+            />
+          ))}
+        </div>
       </div>
 
       <div className="rounded-lg border border-slate-800 p-3">
