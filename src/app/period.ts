@@ -8,6 +8,11 @@ import type {
   ShiftLetter,
 } from "../engine/types";
 
+// F1 is never a valid ride-up target (step-up always covers a *higher*
+// grade), so it can't be the default grade for a step-up entry the UI's
+// grade picker (which only lists F2+) hasn't been touched yet.
+const DEFAULT_STEP_UP_GRADE: PayGrade = "F2";
+
 export type DayEntryType =
   | "off"
   | "regular"
@@ -69,7 +74,7 @@ function defaultEntry(
       type: "holidayWorked",
       hours: scheduledHours,
       destination: "cash",
-      grade: "F1",
+      grade: DEFAULT_STEP_UP_GRADE,
     };
   }
   if (scheduledHours > 0) {
@@ -80,7 +85,7 @@ function defaultEntry(
       type: "regular",
       hours: scheduledHours,
       destination: "cash",
-      grade: "F1",
+      grade: DEFAULT_STEP_UP_GRADE,
     };
   }
   if (isHoliday) {
@@ -91,7 +96,7 @@ function defaultEntry(
       type: "holidayObserved",
       hours: 12,
       destination: "cash",
-      grade: "F1",
+      grade: DEFAULT_STEP_UP_GRADE,
     };
   }
   return {
@@ -101,7 +106,7 @@ function defaultEntry(
     type: "off",
     hours: 0,
     destination: "cash",
-    grade: "F1",
+    grade: DEFAULT_STEP_UP_GRADE,
   };
 }
 

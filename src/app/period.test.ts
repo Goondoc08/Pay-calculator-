@@ -57,6 +57,17 @@ describe("defaultDayEntries", () => {
     expect(offDay?.type).toBe("off");
     expect(offDay?.hours).toBe(0);
   });
+
+  it("never defaults grade to F1 — it's never a valid step-up target", () => {
+    // Regression: the UI's step-up grade picker only lists F2+, so if an
+    // entry's default grade were "F1" the picker would visually show its
+    // first listed option (F2) while the entry actually held "F1" —
+    // silently pricing a step-up block at the wrong (lower) rate the
+    // moment someone picked "Step-up" without also touching the grade
+    // dropdown themselves.
+    const entries = defaultDayEntries(year, "A", period);
+    expect(entries.every((e) => e.grade !== "F1")).toBe(true);
+  });
 });
 
 describe("entriesToBlocks / blocksToEntries round-trip", () => {
