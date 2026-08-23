@@ -53,13 +53,24 @@ export interface DayEntry {
    */
   holidayHoursWorked: number;
   /**
-   * Meaningful only when isHoliday and holidayHoursWorked > 0. Working a
-   * holiday can still be banked as comp instead of cash, same as any other
-   * worked hours — when true, the worked (1.5x) portion pays $0 this
-   * check. The leftover holiday-observed entitlement always still pays
-   * cash regardless of this flag; only the worked portion is bankable.
+   * Meaningful only when isHoliday and holidayHoursWorked > 0. Per city
+   * policy 501.1.1(G): a member who works a holiday can elect "Holiday
+   * Worked-Accrued" (HWA) instead of cash HW — banking the 1.5x premium
+   * hours to use later rather than being paid for them this check.
+   * Confirmed directly: this only replaces the HW premium itself, not the
+   * underlying RG wage for hours actually worked, which always still pays
+   * cash — matching how ordinary FLSA comp time only banks the OT premium,
+   * never the straight-time pay underneath it.
    */
-  holidayWorkedComped: boolean;
+  holidayWorkedAccrued: boolean;
+  /**
+   * Meaningful only when isHoliday and the entitlement isn't fully worked
+   * (worked < 12). Per policy 501.1.1(C): "Holiday Accrued" (HA) is offered
+   * "in lieu of holiday observed pay" — so the unworked remainder of the
+   * entitlement is independently bankable too, separate from whether the
+   * worked portion (if any) was also banked.
+   */
+  holidayObservedAccrued: boolean;
 }
 
 function datesInPeriod(period: Period): string[] {
@@ -108,7 +119,8 @@ function defaultEntry(
       hours: 0,
       grade: defaultStepUpGrade,
       holidayHoursWorked: scheduledHours,
-      holidayWorkedComped: false,
+      holidayWorkedAccrued: false,
+      holidayObservedAccrued: false,
     };
   }
   if (scheduledHours > 0) {
@@ -120,7 +132,8 @@ function defaultEntry(
       hours: scheduledHours,
       grade: defaultStepUpGrade,
       holidayHoursWorked: 0,
-      holidayWorkedComped: false,
+      holidayWorkedAccrued: false,
+      holidayObservedAccrued: false,
     };
   }
   return {
@@ -131,7 +144,8 @@ function defaultEntry(
     hours: 0,
     grade: defaultStepUpGrade,
     holidayHoursWorked: 0,
-    holidayWorkedComped: false,
+    holidayWorkedAccrued: false,
+    holidayObservedAccrued: false,
   };
 }
 
@@ -163,40 +177,42 @@ export function entriesToBlocks(entries: DayEntry[]): HourBlock[] {
   for (const entry of entries) {
     if (entry.isHoliday) {
       const worked = Math.min(24, Math.max(0, entry.holidayHoursWorked));
-      const destination = entry.holidayWorkedComped ? "comp" : "cash";
 
       // Every hour actually worked is an ordinary regular hour, paid at the
-      // effective rate and counted toward the 106-hr cap — the holiday codes
-      // below are premiums layered on top, not replacements for this.
+      // effective rate and counted toward the 106-hr cap. Always cash — RG
+      // is the wage for hours actually worked, never bankable, same as
+      // ordinary FLSA comp time never defers straight-time pay.
       if (worked > 0) {
         blocks.push({
           date: entry.date,
           type: "regular",
           hours: worked,
-          destination,
+          destination: "cash",
         });
       }
 
       // HW: the 1.5x premium adder, capped at the 12-hr entitlement. Working
       // past 12 on one holiday earns no further premium (the hours are still
-      // paid as regular above).
+      // paid as regular above). Independently bankable as HWA.
       const hwHours = Math.min(worked, HOLIDAY_ENTITLEMENT_HOURS);
       if (hwHours > 0) {
         blocks.push({
           date: entry.date,
           type: "holidayWorked",
           hours: hwHours,
-          destination,
+          destination: entry.holidayWorkedAccrued ? "accrue" : "cash",
         });
       }
 
+      // HO: the unworked remainder of the entitlement. Independently
+      // bankable as HA, regardless of whether the worked portion was banked.
       const leftover = Math.max(0, HOLIDAY_ENTITLEMENT_HOURS - worked);
       if (leftover > 0) {
         blocks.push({
           date: entry.date,
           type: "holidayObserved",
           hours: leftover,
-          destination: "cash",
+          destination: entry.holidayObservedAccrued ? "accrue" : "cash",
         });
       }
       continue;
@@ -249,12 +265,12 @@ export function blocksToEntries(
       // hours past 12.
       const workedBlock = dayBlocks.find((b) => b.type === "regular");
       const hwBlock = dayBlocks.find((b) => b.type === "holidayWorked");
+      const hoBlock = dayBlocks.find((b) => b.type === "holidayObserved");
       return {
         ...entry,
         holidayHoursWorked: workedBlock?.hours ?? 0,
-        holidayWorkedComped:
-          workedBlock?.destination === "comp" ||
-          (!workedBlock && hwBlock?.destination === "comp"),
+        holidayWorkedAccrued: hwBlock?.destination === "accrue",
+        holidayObservedAccrued: hoBlock?.destination === "accrue",
       };
     }
 

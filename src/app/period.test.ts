@@ -193,54 +193,52 @@ describe("entriesToBlocks / blocksToEntries round-trip", () => {
     expect(roundTripped).toEqual(entries);
   });
 
-  it("banks worked holiday hours as comp ($0) when holidayWorkedComped is set", () => {
-    // Confirmed by a real timecard: working a holiday and taking it as
-    // comp instead of cash means no straight/premium pay for the worked
-    // portion this check — same $0-if-banked rule as any other worked
-    // hours, just previously unreachable for the holiday-worked case
-    // specifically since that input only ever emitted "cash".
+  const flatProfile = {
+    shift: "A" as const,
+    rateSegments: [
+      {
+        effectiveFrom: year.effectiveFrom,
+        hourlyRate: 26.8173,
+        incentiveTotal: 0,
+      },
+    ],
+    longevityAnnual: 0,
+  };
+
+  it("banks the HW premium as HWA — RG still pays cash, only HW goes to $0", () => {
+    // Per city policy 501.1.1(G): HWA is "in lieu of Holiday Worked" (the
+    // premium specifically), not the underlying wage for hours actually
+    // worked — same as ordinary FLSA comp time, which only defers the OT
+    // premium and never the straight-time pay underneath it. Confirmed
+    // directly.
     const period = year.periods[4];
     const entries = defaultDayEntries(year, "A", period).map((e) =>
       e.date === "2026-11-26"
-        ? { ...e, holidayHoursWorked: 24, holidayWorkedComped: true }
+        ? { ...e, holidayHoursWorked: 24, holidayWorkedAccrued: true }
         : e,
     );
     const blocks = entriesToBlocks(entries);
     const thanksgivingBlocks = blocks.filter((b) => b.date === "2026-11-26");
     expect(thanksgivingBlocks).toEqual([
-      { date: "2026-11-26", type: "regular", hours: 24, destination: "comp" },
+      { date: "2026-11-26", type: "regular", hours: 24, destination: "cash" },
       {
         date: "2026-11-26",
         type: "holidayWorked",
         hours: 12,
-        destination: "comp",
+        destination: "accrue",
       },
     ]);
 
-    const profile = {
-      shift: "A" as const,
-      rateSegments: [
-        {
-          effectiveFrom: year.effectiveFrom,
-          hourlyRate: 26.8173,
-          incentiveTotal: 0,
-        },
-      ],
-      longevityAnnual: 0,
-    };
-    const thanksgivingGross = computePeriod(
-      year,
-      profile,
-      thanksgivingBlocks,
-    ).gross;
-    expect(thanksgivingGross).toBe(0);
+    const gross = computePeriod(year, flatProfile, thanksgivingBlocks).gross;
+    // Only RG pays this check — the HW premium is banked, not cash.
+    expect(gross).toBeCloseTo(24 * 26.8173, 4);
   });
 
-  it("round-trips a comped holiday-worked entry", () => {
+  it("round-trips an HWA-banked holiday-worked entry", () => {
     const period = year.periods[4];
     const entries = defaultDayEntries(year, "A", period).map((e) =>
       e.date === "2026-11-26"
-        ? { ...e, holidayHoursWorked: 24, holidayWorkedComped: true }
+        ? { ...e, holidayHoursWorked: 24, holidayWorkedAccrued: true }
         : e,
     );
     const blocks = entriesToBlocks(entries);
@@ -248,7 +246,64 @@ describe("entriesToBlocks / blocksToEntries round-trip", () => {
     expect(roundTripped).toEqual(entries);
   });
 
-  it("emits every block as destination cash — no comp/accrue tracking", () => {
+  it("banks the HO leftover as HA independently of whether HW was worked", () => {
+    // Per city policy 501.1.1(C): HA is offered "in lieu of holiday
+    // observed pay" — a separate election from HWA, and available even on
+    // a fully-unworked holiday.
+    const period = year.periods[4];
+    const entries = defaultDayEntries(year, "A", period).map((e) =>
+      e.date === "2026-11-26"
+        ? { ...e, holidayHoursWorked: 0, holidayObservedAccrued: true }
+        : e,
+    );
+    const blocks = entriesToBlocks(entries);
+    const thanksgivingBlocks = blocks.filter((b) => b.date === "2026-11-26");
+    expect(thanksgivingBlocks).toEqual([
+      {
+        date: "2026-11-26",
+        type: "holidayObserved",
+        hours: 12,
+        destination: "accrue",
+      },
+    ]);
+    expect(computePeriod(year, flatProfile, thanksgivingBlocks).gross).toBe(0);
+  });
+
+  it("HWA and HA are independent — a partial holdover can bank one and cash the other", () => {
+    const period = year.periods[4];
+    const entries = defaultDayEntries(year, "A", period).map((e) =>
+      e.date === "2026-11-26"
+        ? {
+            ...e,
+            holidayHoursWorked: 2,
+            holidayWorkedAccrued: true,
+            holidayObservedAccrued: false,
+          }
+        : e,
+    );
+    const blocks = entriesToBlocks(entries);
+    const thanksgivingBlocks = blocks.filter((b) => b.date === "2026-11-26");
+    expect(thanksgivingBlocks).toEqual([
+      { date: "2026-11-26", type: "regular", hours: 2, destination: "cash" },
+      {
+        date: "2026-11-26",
+        type: "holidayWorked",
+        hours: 2,
+        destination: "accrue",
+      },
+      {
+        date: "2026-11-26",
+        type: "holidayObserved",
+        hours: 10,
+        destination: "cash",
+      },
+    ]);
+
+    const roundTripped = blocksToEntries(year, "A", period, blocks);
+    expect(roundTripped).toEqual(entries);
+  });
+
+  it("emits every block as destination cash by default — accrual is opt-in", () => {
     const period = year.periods[4];
     const entries = defaultDayEntries(year, "A", period);
     const blocks = entriesToBlocks(entries);
