@@ -99,10 +99,32 @@ export function nextGradeUp(year: PayYear, grade: PayGrade): PayGrade | null {
   return grades[index + 1];
 }
 
-export const GRADE_LABELS: Record<string, string> = {
-  F1: "Fire Fighter (F1)",
-  F2: "Driver/Operator (F2)",
-  F3: "Lieutenant / Captain (F3)",
-  F4: "Battalion Chief (F4)",
-  F5: "Battalion Chief (F5)",
+/**
+ * Rank names, per year — the same grade code means a different rank
+ * depending on which year's table it's read against. FY26 has Lieutenant
+ * (F3) and Captain (F4) as separate grades under Battalion Chief (F5);
+ * FY27's officer-rank merger folds Lieutenant and Captain into one grade
+ * (still F3, name "Captain") and shifts Battalion Chief down to F4 — one
+ * fewer grade overall (docs/PAY_PLAN.md "The officer-rank merger").
+ */
+const GRADE_LABELS_BY_YEAR: Record<string, Record<string, string>> = {
+  FY26: {
+    F1: "Fire Fighter (F1)",
+    F2: "Driver/Operator (F2)",
+    F3: "Lieutenant (F3)",
+    F4: "Captain (F4)",
+    F5: "Battalion Chief (F5)",
+  },
+  FY27: {
+    F1: "Fire Fighter (F1)",
+    F2: "Driver/Operator (F2)",
+    F3: "Captain (F3)",
+    F4: "Battalion Chief (F4)",
+  },
 };
+
+/** Falls back to the bare grade code for a year this table doesn't cover
+ * yet (e.g. a newly-imported FY28) rather than guessing at a rank name. */
+export function gradeLabel(yearId: string, grade: PayGrade): string {
+  return GRADE_LABELS_BY_YEAR[yearId]?.[grade] ?? grade;
+}

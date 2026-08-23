@@ -4,6 +4,7 @@ import fy27Raw from "../data/fy27.json";
 import { parsePayYear } from "../data/schema";
 import {
   computeUpcomingStep,
+  gradeLabel,
   matchStep,
   nextAnniversaryOnOrAfter,
   nextGradeUp,
@@ -90,5 +91,23 @@ describe("nextGradeUp", () => {
     const fy26 = parsePayYear(fy26Raw);
     expect(nextGradeUp(fy26, "F4")).toBe("F5");
     expect(nextGradeUp(fy26, "F5")).toBeNull();
+  });
+});
+
+describe("gradeLabel", () => {
+  it("names F3/F4 differently per year around the officer-rank merger", () => {
+    // FY26: Lieutenant (F3) and Captain (F4) are separate grades under
+    // Battalion Chief (F5). FY27 merges them into one Captain grade
+    // (still F3) and shifts Battalion Chief down to F4.
+    expect(gradeLabel("FY26", "F3")).toBe("Lieutenant (F3)");
+    expect(gradeLabel("FY26", "F4")).toBe("Captain (F4)");
+    expect(gradeLabel("FY26", "F5")).toBe("Battalion Chief (F5)");
+
+    expect(gradeLabel("FY27", "F3")).toBe("Captain (F3)");
+    expect(gradeLabel("FY27", "F4")).toBe("Battalion Chief (F4)");
+  });
+
+  it("falls back to the bare grade code for a year it doesn't cover", () => {
+    expect(gradeLabel("FY28", "F3")).toBe("F3");
   });
 });

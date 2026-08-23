@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useAppData } from "../app/AppData";
 import {
   computeUpcomingStep,
-  GRADE_LABELS,
+  gradeLabel,
   matchStep,
 } from "../app/stepProgression";
 import { todayIso } from "../app/years";
@@ -230,7 +230,10 @@ export function SetupScreen({
         label="Rank / grade"
         value={grade}
         onChange={(v) => handleGradeChange(v as PayGrade)}
-        options={grades.map((g) => ({ value: g, label: GRADE_LABELS[g] ?? g }))}
+        options={grades.map((g) => ({
+          value: g,
+          label: gradeLabel(year.id, g),
+        }))}
       />
 
       <Select
