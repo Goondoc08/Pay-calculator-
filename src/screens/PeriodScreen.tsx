@@ -385,6 +385,65 @@ function CompareToCheck({
 const HOLIDAY_LABELS = new Set(["Holiday worked", "Holiday observed"]);
 const FLSA_LABEL = "FLSA premium";
 
+/** A fast jump grid over every period in the year — an alternative to
+ * spamming Prev/Next to reach a period several weeks away. Deliberately
+ * lighter than the Year tab's list (no gross/running totals computed per
+ * period): this is for getting somewhere fast, not for reviewing pay. */
+function PeriodPickerModal({
+  year,
+  currentPeriodN,
+  onSelect,
+  onClose,
+}: {
+  year: PayYear;
+  currentPeriodN: number;
+  onSelect: (periodNumber: number) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-10 flex items-end justify-center bg-structure/60 sm:items-center"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-t-xl border border-line bg-surface p-3 sm:rounded-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-sm font-semibold">Jump to a period</h2>
+          <button
+            type="button"
+            aria-label="Close"
+            className="rounded-md px-2 py-1 text-ink-muted"
+            onClick={onClose}
+          >
+            ✕
+          </button>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {year.periods.map((p) => (
+            <button
+              key={p.n}
+              type="button"
+              onClick={() => onSelect(p.n)}
+              className={`flex flex-col items-center rounded-lg border p-2 text-center ${
+                p.n === currentPeriodN
+                  ? "border-holiday bg-holiday-soft"
+                  : "border-line"
+              }`}
+            >
+              <span className="text-sm font-medium">{p.n}</span>
+              <span className="text-[10px] text-ink-muted">
+                {p.start.slice(5)}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function PeriodScreen({
   year,
   profile,
@@ -398,6 +457,7 @@ export function PeriodScreen({
 }) {
   const { getPeriodBlocks, setPeriodBlocks, progression } = useAppData();
   const [breakdownOpen, setBreakdownOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const memberGrade = progression?.grade ?? null;
 
   // Entries are local editing state, loaded once per period (not re-derived
@@ -466,12 +526,16 @@ export function PeriodScreen({
         >
           ← Prev
         </button>
-        <div className="text-center">
+        <button
+          type="button"
+          onClick={() => setPickerOpen(true)}
+          className="flex flex-col items-center rounded-md px-2 py-1"
+        >
           <div className="text-sm font-medium">Period {period.n}</div>
-          <div className="text-xs text-ink-muted">
+          <div className="text-xs text-ink-muted underline decoration-dotted">
             {period.start} – {period.end}
           </div>
-        </div>
+        </button>
         <button
           type="button"
           disabled={period.n >= year.periods.length}
@@ -481,6 +545,18 @@ export function PeriodScreen({
           Next →
         </button>
       </div>
+
+      {pickerOpen && (
+        <PeriodPickerModal
+          year={year}
+          currentPeriodN={period.n}
+          onSelect={(n) => {
+            onNavigate(n);
+            setPickerOpen(false);
+          }}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
 
       <div className="flex flex-col gap-2">
         {entries.map((entry, i) =>

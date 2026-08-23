@@ -54,6 +54,17 @@ function AppShell() {
   const period =
     year.periods.find((p) => p.n === periodNumber) ?? year.periods[0];
 
+  // "This Period" always means literally today's period, not wherever the
+  // member last navigated to — Prev/Next, the Year list, and the jump grid
+  // all leave you on the period you picked, but this tab is a snap-back,
+  // every time it's clicked (including re-clicking it while already on it).
+  function handleTabChange(next: Tab) {
+    if (next === "period") {
+      setPeriodNumber(findPeriodForDate(year, today)?.n ?? 1);
+    }
+    setTab(next);
+  }
+
   if (setupOpen || !profile) {
     return <SetupScreen year={year} onDone={() => setSetupOpen(false)} />;
   }
@@ -64,7 +75,7 @@ function AppShell() {
 
   return (
     <div className="min-h-dvh bg-canvas text-ink">
-      <TabBar tab={tab} onChange={setTab} />
+      <TabBar tab={tab} onChange={handleTabChange} />
       <InstallCard />
       {tab === "period" && (
         <PeriodScreen
