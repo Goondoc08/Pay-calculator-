@@ -220,6 +220,120 @@ describe("computePeriod", () => {
     expect(result.gross).not.toBeCloseTo(sheetTotal, 2);
   });
 
+  it("matches the member's real FY26 and FY27 sheets on a partial holiday holdover crossing the FLSA cap", () => {
+    // Verified live (2026-08-23) against both the member's personal FY26
+    // and FY27 sheets: 5 scheduled 24-hr days (120h) plus a 6-hr holdover
+    // on an off-day holiday (6 RG + 6 HW + 6 HO), 20 hrs over the 106-hr
+    // cap. Both sheets landed on this exact total once their own input
+    // errors were corrected (FY26: an incentive-omission bug already
+    // documented in knownDivergencesFy26.ts; FY27: a rounded hourly rate
+    // and a stale placeholder step date, both sheet data-entry mistakes,
+    // not engine bugs) — real rate ($35.3302 + $3.0906 incentive) and
+    // longevity ($284).
+    const profile: Profile = {
+      shift: "A",
+      rateSegments: [
+        {
+          effectiveFrom: "2026-09-26",
+          hourlyRate: 35.3302,
+          incentiveTotal: 3.0906,
+        },
+      ],
+      longevityAnnual: 284,
+    };
+    const scheduled: HourBlock[] = [
+      "2026-09-27",
+      "2026-09-28",
+      "2026-10-03",
+      "2026-10-04",
+      "2026-10-09",
+    ].map((date) => ({
+      date,
+      type: "regular",
+      hours: 24,
+      destination: "cash",
+    }));
+    const blocks: HourBlock[] = [
+      ...scheduled,
+      { date: "2026-10-10", type: "regular", hours: 6, destination: "cash" },
+      {
+        date: "2026-10-10",
+        type: "holidayWorked",
+        hours: 6,
+        destination: "cash",
+      },
+      {
+        date: "2026-10-10",
+        type: "holidayObserved",
+        hours: 6,
+        destination: "cash",
+      },
+    ];
+
+    const result = computePeriod(year, profile, blocks);
+    expect(result.totalHours).toBe(126);
+    expect(result.otHours).toBe(20);
+
+    const rate = 35.3302 + 3.0906;
+    const straight = 126 * rate + 6 * 1.5 * rate + 6 * rate;
+    const flsaPremium = 20 * (0.5 * rate + 0.5 * (284 / 2912));
+    expect(result.gross).toBeCloseTo(straight + flsaPremium, 4);
+    expect(result.gross).toBeCloseTo(5802.52, 2);
+  });
+
+  it("matches the same holdover scenario when it stays under the FLSA cap", () => {
+    // Same shape, verified against the FY27 sheet for the MLK-day period:
+    // 4 scheduled days (96h) instead of 5, so 102h total stays under 106 —
+    // no FLSA premium line at all.
+    const profile: Profile = {
+      shift: "A",
+      rateSegments: [
+        {
+          effectiveFrom: "2026-09-26",
+          hourlyRate: 35.3302,
+          incentiveTotal: 3.0906,
+        },
+      ],
+      longevityAnnual: 284,
+    };
+    const scheduled: HourBlock[] = [
+      "2026-09-27",
+      "2026-09-28",
+      "2026-10-03",
+      "2026-10-04",
+    ].map((date) => ({
+      date,
+      type: "regular",
+      hours: 24,
+      destination: "cash",
+    }));
+    const blocks: HourBlock[] = [
+      ...scheduled,
+      { date: "2026-10-09", type: "regular", hours: 6, destination: "cash" },
+      {
+        date: "2026-10-09",
+        type: "holidayWorked",
+        hours: 6,
+        destination: "cash",
+      },
+      {
+        date: "2026-10-09",
+        type: "holidayObserved",
+        hours: 6,
+        destination: "cash",
+      },
+    ];
+
+    const result = computePeriod(year, profile, blocks);
+    expect(result.totalHours).toBe(102);
+    expect(result.otHours).toBe(0);
+
+    const rate = 35.3302 + 3.0906;
+    const straight = 102 * rate + 6 * 1.5 * rate + 6 * rate;
+    expect(result.gross).toBeCloseTo(straight, 4);
+    expect(result.gross).toBeCloseTo(4495.23, 2);
+  });
+
   it("computeStepUp returns Step 0 of the covered grade, not a percentage", () => {
     expect(computeStepUp(year, "F2")).toBe(35.3302);
     expect(computeStepUp(year, "F3")).toBe(41.7566);
