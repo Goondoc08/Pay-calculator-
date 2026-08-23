@@ -1,35 +1,39 @@
 /** @type {import('tailwindcss').Config} */
+
+// The tokens live as raw "R G B" channels in src/index.css; wrapping them in
+// rgb(... / <alpha-value>) is what lets `bg-surface/95` and friends work.
+// Using the bare `var(--token)` form here would make every /opacity class
+// emit invalid CSS and silently fall back to an inherited colour.
+const token = (name) => `rgb(var(--c-${name}) / <alpha-value>)`;
+
 export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
-      // Semantic names only — the actual values live as CSS custom
-      // properties in src/index.css so light and dark are two definitions
-      // of one vocabulary rather than two sets of utility classes.
       colors: {
-        canvas: "var(--c-canvas)",
-        surface: "var(--c-surface)",
-        "surface-alt": "var(--c-surface-alt)",
-        line: "var(--c-line)",
-        "line-strong": "var(--c-line-strong)",
-        ink: "var(--c-text)",
-        "ink-muted": "var(--c-text-muted)",
-        brand: "var(--c-brand)",
-        "brand-ink": "var(--c-brand-ink)",
-        structure: "var(--c-structure)",
-        accent: "var(--c-accent)",
-        "accent-ink": "var(--c-accent-ink)",
-        "accent-soft": "var(--c-accent-soft)",
-        holiday: "var(--c-holiday)",
-        "holiday-ink": "var(--c-holiday-ink)",
-        "holiday-soft": "var(--c-holiday-soft)",
-        warn: "var(--c-warn)",
-        "warn-soft": "var(--c-warn-soft)",
-        danger: "var(--c-danger)",
-        "danger-ink": "var(--c-danger-ink)",
-        "danger-soft": "var(--c-danger-soft)",
-        good: "var(--c-good)",
-        brass: "var(--c-brass)",
+        canvas: token("canvas"),
+        surface: token("surface"),
+        "surface-alt": token("surface-alt"),
+        line: token("line"),
+        "line-strong": token("line-strong"),
+        ink: token("text"),
+        "ink-muted": token("text-muted"),
+        brand: token("brand"),
+        "brand-ink": token("brand-ink"),
+        structure: token("structure"),
+        accent: token("accent"),
+        "accent-ink": token("accent-ink"),
+        "accent-soft": token("accent-soft"),
+        holiday: token("holiday"),
+        "holiday-ink": token("holiday-ink"),
+        "holiday-soft": token("holiday-soft"),
+        warn: token("warn"),
+        "warn-soft": token("warn-soft"),
+        good: token("good"),
+        brass: token("brass"),
+        danger: token("danger"),
+        "danger-ink": token("danger-ink"),
+        "danger-soft": token("danger-soft"),
       },
     },
   },

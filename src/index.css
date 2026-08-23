@@ -7,79 +7,86 @@
  * here rather than a raw hex in a component, so light and dark are two
  * definitions of the same names instead of two sets of classes.
  *
- * Holiday lavender (#A98EF0) is deliberately shared with the PFD Link app,
- * which in turn took it from the purple the department fills holiday cells
- * with on its own pay calendar workbook — the same fill this app's importer
- * keys off to detect holiday dates. One colour, three places, same meaning.
+ * Values are raw "R G B" channels, not hex, so Tailwind's alpha modifiers
+ * (bg-surface/95, text-brand-ink/70) can compose them via
+ * `rgb(var(--token) / <alpha-value>)`. A hex value here silently produces
+ * invalid CSS for any class with a /opacity suffix, and the element then
+ * inherits its colour instead — which is how the nav tabs ended up
+ * rendering near-black text on the green bar.
+ *
+ * Holiday lavender (169 142 240 = #A98EF0) is deliberately shared with the
+ * PFD Link app, which in turn took it from the purple the department fills
+ * holiday cells with on its own pay calendar workbook — the same fill this
+ * app's importer keys off to detect holiday dates.
  */
 :root {
   /* Light (the palette's own stated roles: Crisp White is the primary
      surface, Fog Gray the backdrop, Slate Ink the text). */
-  --c-canvas: #e2e8e8; /* Fog Gray */
-  --c-surface: #ffffff; /* Crisp White */
-  --c-surface-alt: #f3f7f6;
-  --c-line: #c7d2d2;
-  --c-line-strong: #a9b8b8;
-  --c-text: #111923; /* Slate Ink */
-  --c-text-muted: #566068;
+  --c-canvas: 226 232 232; /* #E2E8E8 Fog Gray */
+  --c-surface: 255 255 255; /* #FFFFFF Crisp White */
+  --c-surface-alt: 243 247 246;
+  --c-line: 199 210 210;
+  --c-line-strong: 169 184 184;
+  --c-text: 17 25 35; /* #111923 Slate Ink */
+  --c-text-muted: 86 96 104;
 
-  --c-brand: #1b3b36; /* Deep Alpine */
-  --c-brand-ink: #ffffff;
-  --c-structure: #2c3e50; /* Slate Navy */
+  --c-brand: 27 59 54; /* #1B3B36 Deep Alpine */
+  --c-brand-ink: 255 255 255;
+  --c-structure: 44 62 80; /* #2C3E50 Slate Navy */
 
-  --c-accent: #3d6b63; /* Alpine Teal */
-  --c-accent-ink: #ffffff;
-  --c-accent-soft: #e6efec;
+  --c-accent: 61 107 99; /* #3D6B63 Alpine Teal */
+  --c-accent-ink: 255 255 255;
+  --c-accent-soft: 230 239 236;
 
-  --c-holiday: #a98ef0; /* Holiday Lavender */
-  --c-holiday-ink: #5b3fa8;
-  --c-holiday-soft: #f2edfd;
+  --c-holiday: 169 142 240; /* #A98EF0 Holiday Lavender */
+  --c-holiday-ink: 91 63 168;
+  --c-holiday-soft: 242 237 253;
 
-  --c-warn: #b5560a; /* Vibrant Amber, darkened for text on white */
-  --c-warn-soft: #fdf0e4;
-  --c-good: #2f6b52;
-  --c-brass: #8c6a2c; /* Refined Brass */
+  --c-warn: 181 86 10; /* Vibrant Amber, darkened for text on white */
+  --c-warn-soft: 253 240 228;
+  --c-good: 47 107 82;
+  --c-brass: 140 106 44; /* Refined Brass */
 
   /* Not in the supplied palette — destructive actions (wipe, delete) need
      to read as more than a warning. Kept muted to match the palette's
      restraint rather than a bright alarm red. */
-  --c-danger: #a3312b;
-  --c-danger-ink: #ffffff;
-  --c-danger-soft: #fbeceb;
+  --c-danger: 163 49 43;
+  --c-danger-ink: 255 255 255;
+  --c-danger-soft: 251 236 235;
 
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --c-canvas: #111923; /* Slate Ink */
-    --c-surface: #1a2531;
-    --c-surface-alt: #22303e;
-    --c-line: #2c3e50; /* Slate Navy */
-    --c-line-strong: #3d5165;
-    --c-text: #e9eeee;
-    --c-text-muted: #93a3ad;
+    --c-canvas: 17 25 35; /* #111923 Slate Ink */
+    --c-surface: 26 37 49;
+    --c-surface-alt: 34 48 62;
+    --c-line: 44 62 80; /* #2C3E50 Slate Navy */
+    --c-line-strong: 61 81 101;
+    --c-text: 233 238 238;
+    --c-text-muted: 147 163 173;
 
-    --c-brand: #1b3b36;
-    --c-brand-ink: #eaf2f0;
-    --c-structure: #2c3e50;
+    --c-brand: 27 59 54;
+    --c-brand-ink: 234 242 240;
+    --c-structure: 44 62 80;
 
-    --c-accent: #6fb3a6;
-    --c-accent-ink: #0d1a17;
-    --c-accent-soft: #1d3a34;
+    --c-accent: 111 179 166;
+    --c-accent-ink: 13 26 23;
+    --c-accent-soft: 29 58 52;
 
-    --c-holiday: #a98ef0;
-    --c-holiday-ink: #c9b6f7;
-    --c-holiday-soft: #2a2440;
+    --c-holiday: 169 142 240;
+    --c-holiday-ink: 201 182 247;
+    --c-holiday-soft: 42 36 64;
 
-    --c-warn: #f0913d;
-    --c-warn-soft: #33241a;
-    --c-good: #6fb3a6;
-    --c-brass: #c79a4a;
+    --c-warn: 240 145 61;
+    --c-warn-soft: 51 36 26;
+    --c-good: 111 179 166;
+    --c-brass: 199 154 74;
 
-    --c-danger: #e8736a;
-    --c-danger-ink: #2a100d;
-    --c-danger-soft: #33201e;
+    --c-danger: 232 115 106;
+    --c-danger-ink: 42 16 13;
+    --c-danger-soft: 51 32 30;
 
     color-scheme: dark;
   }
@@ -92,6 +99,6 @@ body,
 }
 
 body {
-  background: var(--c-canvas);
-  color: var(--c-text);
+  background: rgb(var(--c-canvas));
+  color: rgb(var(--c-text));
 }

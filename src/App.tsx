@@ -24,10 +24,10 @@ function TabBar({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void }) {
           key={t.key}
           type="button"
           onClick={() => onChange(t.key)}
-          className={`flex-1 py-3 text-sm font-medium transition-colors ${
+          className={`flex-1 border-b-2 py-3 text-sm transition-colors ${
             tab === t.key
-              ? "border-b-2 border-holiday text-brand-ink"
-              : "border-b-2 border-transparent text-brand-ink/60"
+              ? "border-holiday font-semibold text-brand-ink"
+              : "border-transparent font-medium text-brand-ink/80"
           }`}
         >
           {t.label}
