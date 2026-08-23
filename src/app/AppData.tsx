@@ -33,6 +33,8 @@ interface AppDataValue {
   ) => void;
   selectedYearId: string | null;
   setSelectedYearId: (id: string | null) => void;
+  installCardDismissed: boolean;
+  dismissInstallCard: () => void;
   saveError: string | null;
   exportJson: () => string;
   importJson: (json: string) => { ok: boolean; error: string | undefined };
@@ -109,6 +111,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     [update],
   );
 
+  const dismissInstallCard = useCallback(() => {
+    update((prev) => ({
+      ...prev,
+      settings: { ...prev.settings, installCardDismissed: true },
+    }));
+  }, [update]);
+
   const exportJson = useCallback(() => exportToJson(data), [data]);
 
   const importJson = useCallback(
@@ -140,6 +149,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       setPeriodBlocks,
       selectedYearId: data.settings.selectedYearId,
       setSelectedYearId,
+      installCardDismissed: data.settings.installCardDismissed,
+      dismissInstallCard,
       saveError,
       exportJson,
       importJson,
@@ -149,11 +160,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       data.profile,
       data.progression,
       data.settings.selectedYearId,
+      data.settings.installCardDismissed,
       setProfile,
       setProgression,
       getPeriodBlocks,
       setPeriodBlocks,
       setSelectedYearId,
+      dismissInstallCard,
       saveError,
       exportJson,
       importJson,

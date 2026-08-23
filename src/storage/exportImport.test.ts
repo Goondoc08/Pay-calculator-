@@ -40,7 +40,7 @@ const sample: StoredDataV1 = {
       },
     ],
   },
-  settings: { selectedYearId: "FY27" },
+  settings: { selectedYearId: "FY27", installCardDismissed: false },
   progression: {
     grade: "F1",
     anniversaryDate: "2027-04-01",

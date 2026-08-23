@@ -2,6 +2,8 @@ import { useState } from "react";
 import { AppDataProvider, useAppData } from "./app/AppData";
 import { findPeriodForDate } from "./app/period";
 import { getYear, resolveActiveYear, todayIso } from "./app/years";
+import { HelpScreen } from "./screens/HelpScreen";
+import { InstallCard } from "./screens/InstallCard";
 import { PeriodScreen } from "./screens/PeriodScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { SetupScreen } from "./screens/SetupScreen";
@@ -38,6 +40,7 @@ function TabBar({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void }) {
 function AppShell() {
   const { profile, selectedYearId, setSelectedYearId } = useAppData();
   const [setupOpen, setSetupOpen] = useState(profile === null);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("period");
 
   const today = todayIso();
@@ -55,9 +58,14 @@ function AppShell() {
     return <SetupScreen year={year} onDone={() => setSetupOpen(false)} />;
   }
 
+  if (helpOpen) {
+    return <HelpScreen onBack={() => setHelpOpen(false)} />;
+  }
+
   return (
     <div className="min-h-dvh bg-slate-950 text-slate-100">
       <TabBar tab={tab} onChange={setTab} />
+      <InstallCard />
       {tab === "period" && (
         <PeriodScreen
           year={year}
@@ -86,6 +94,7 @@ function AppShell() {
       {tab === "settings" && (
         <SettingsScreen
           onEditSetup={() => setSetupOpen(true)}
+          onOpenHelp={() => setHelpOpen(true)}
           onWiped={() => {
             setSetupOpen(true);
             setTab("period");

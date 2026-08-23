@@ -4,6 +4,7 @@ import {
   hourBlockListSchema,
   profileSchema,
   progressionSchema,
+  settingsSchema,
   storedDataV1Schema,
   type StoredDataV1,
 } from "./schema";
@@ -44,18 +45,8 @@ function recoverPartial(data: Record<string, unknown>): StoredDataV1 {
     }
   }
 
-  if (
-    typeof data.settings === "object" &&
-    data.settings !== null &&
-    "selectedYearId" in data.settings &&
-    (typeof (data.settings as { selectedYearId: unknown }).selectedYearId ===
-      "string" ||
-      (data.settings as { selectedYearId: unknown }).selectedYearId === null)
-  ) {
-    base.settings.selectedYearId = (
-      data.settings as { selectedYearId: string | null }
-    ).selectedYearId;
-  }
+  const settingsResult = settingsSchema.safeParse(data.settings);
+  if (settingsResult.success) base.settings = settingsResult.data;
 
   const progressionResult = progressionSchema
     .nullable()

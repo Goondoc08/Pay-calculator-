@@ -79,8 +79,11 @@ export const hourBlockListSchema = z.array(hourBlockSchema);
 /** Key: `${yearId}:${periodNumber}`, e.g. "FY27:14". */
 export const periodEntriesSchema = z.record(z.string(), hourBlockListSchema);
 
-const settingsSchema = z.object({
+export const settingsSchema = z.object({
   selectedYearId: z.string().nullable(),
+  // .default(false) so data saved before this field existed still parses —
+  // treated as "not yet dismissed," which just shows the card once more.
+  installCardDismissed: z.boolean().default(false),
 });
 
 export const storedDataV1Schema = z.object({
@@ -99,7 +102,7 @@ export function emptyStoredData(): StoredDataV1 {
     version: 1,
     profile: null,
     periodEntries: {},
-    settings: { selectedYearId: null },
+    settings: { selectedYearId: null, installCardDismissed: false },
     progression: null,
   };
 }

@@ -4,9 +4,11 @@ import { AVAILABLE_YEARS } from "../app/years";
 
 export function SettingsScreen({
   onEditSetup,
+  onOpenHelp,
   onWiped,
 }: {
   onEditSetup: () => void;
+  onOpenHelp: () => void;
   onWiped: () => void;
 }) {
   const { exportJson, importJson, wipe, selectedYearId, setSelectedYearId } =
@@ -63,6 +65,17 @@ export function SettingsScreen({
             </option>
           ))}
         </select>
+      </div>
+
+      <div className="flex flex-col gap-2 rounded-lg border border-slate-800 p-3">
+        <h2 className="text-sm font-medium text-slate-300">Help</h2>
+        <button
+          type="button"
+          onClick={onOpenHelp}
+          className="rounded-md border border-slate-700 px-3 py-2 text-left text-sm"
+        >
+          How to use this / install instructions
+        </button>
       </div>
 
       <div className="flex flex-col gap-2 rounded-lg border border-slate-800 p-3">

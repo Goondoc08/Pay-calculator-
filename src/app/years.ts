@@ -44,6 +44,19 @@ export function resolveActiveYear(today: string): PayYear {
   );
 }
 
+/**
+ * Today's date, in the device's own local calendar day — not UTC. A member
+ * checks this app on their phone, in their own timezone; `toISOString()`
+ * would silently roll the date over early or late depending on how far the
+ * device's timezone sits from UTC (e.g. the FY26->FY27 cutover firing up
+ * to several hours off local midnight), which is exactly the kind of bug
+ * that only shows up once a year and only near a boundary — not something
+ * to risk on a cutover date.
+ */
 export function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }

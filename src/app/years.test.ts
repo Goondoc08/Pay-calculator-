@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { getYear, resolveActiveYear } from "./years";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getYear, resolveActiveYear, todayIso } from "./years";
 
 describe("resolveActiveYear", () => {
   it("returns FY26 for a date inside its window", () => {
@@ -21,6 +21,28 @@ describe("resolveActiveYear", () => {
 
   it("falls back to the latest year when today is after every year", () => {
     expect(resolveActiveYear("2099-01-01").id).toBe("FY27");
+  });
+});
+
+describe("cutover at the real system clock (BUILD_PLAN.md Phase 07 gate)", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("resolves to FY26 the instant before the cutover, in the phone's own clock", () => {
+    // 2026-09-25 23:59:59 local time — one second before FY27 takes over.
+    vi.setSystemTime(new Date(2026, 8, 25, 23, 59, 59));
+    expect(resolveActiveYear(todayIso()).id).toBe("FY26");
+  });
+
+  it("resolves to FY27 the instant of the cutover, with no update or reinstall", () => {
+    // 2026-09-26 00:00:00 local time — the moment FY27 takes over.
+    vi.setSystemTime(new Date(2026, 8, 26, 0, 0, 0));
+    expect(resolveActiveYear(todayIso()).id).toBe("FY27");
   });
 });
 
