@@ -45,13 +45,21 @@ export function profileFromFixture(
   return { shift, rateSegments };
 }
 
+/** The standard holiday-off entitlement, and the cap on the holiday-worked
+ * premium itself — confirmed directly: working more than 12 hrs of a
+ * holiday doesn't earn more premium, the excess is just an ordinary
+ * regular day past that point (src/app/period.ts carries the same rule
+ * for the interface). */
+const HOLIDAY_ENTITLEMENT_HOURS = 12;
+
 /**
  * Reconstructs typed hour blocks from the workbook's own worked-day cells:
- * a worked day on a holiday date is holiday-worked; a holiday date the
- * shift didn't work (and that isn't already a worked-day cell) is a 12-hr
- * holiday-observed block, matching how the sheet auto-populates HO/HW from
- * the schedule intersected with the holiday calendar (docs/BUILD_PLAN.md
- * Appendix).
+ * a worked day on a holiday date is holiday-worked (capped at the 12-hr
+ * entitlement; any excess is an ordinary regular block); a holiday date
+ * the shift didn't work (and that isn't already a worked-day cell) is a
+ * 12-hr holiday-observed block, matching how the sheet auto-populates
+ * HO/HW from the schedule intersected with the holiday calendar
+ * (docs/BUILD_PLAN.md Appendix).
  */
 export function blocksFromFixturePeriod(
   year: PayYear,
@@ -62,12 +70,28 @@ export function blocksFromFixturePeriod(
   const blocks: HourBlock[] = [];
 
   for (const [date, hours] of Object.entries(period.dayHours)) {
-    blocks.push({
-      date,
-      type: holidayDates.has(date) ? "holidayWorked" : "regular",
-      hours,
-      destination: "cash",
-    });
+    if (holidayDates.has(date)) {
+      const hwHours = Math.min(hours, HOLIDAY_ENTITLEMENT_HOURS);
+      if (hwHours > 0) {
+        blocks.push({
+          date,
+          type: "holidayWorked",
+          hours: hwHours,
+          destination: "cash",
+        });
+      }
+      const excessRegularHours = Math.max(0, hours - HOLIDAY_ENTITLEMENT_HOURS);
+      if (excessRegularHours > 0) {
+        blocks.push({
+          date,
+          type: "regular",
+          hours: excessRegularHours,
+          destination: "cash",
+        });
+      }
+    } else {
+      blocks.push({ date, type: "regular", hours, destination: "cash" });
+    }
   }
 
   let cur = period.start;
@@ -81,7 +105,7 @@ export function blocksFromFixturePeriod(
       blocks.push({
         date: cur,
         type: "holidayObserved",
-        hours: 12,
+        hours: HOLIDAY_ENTITLEMENT_HOURS,
         destination: "cash",
       });
     }

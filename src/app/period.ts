@@ -39,12 +39,20 @@ export interface DayEntry {
   grade: PayGrade;
   /**
    * Meaningful only when isHoliday. Hours actually worked on the holiday
-   * (0-24) — everything is derived from this: those hours pay 1.5x
-   * (holiday-worked), and whatever's left of the 12-hr entitlement
-   * (12 - worked, floored at 0) still pays straight time
-   * (holiday-observed). A holdover of just part of the entitlement (e.g.
-   * 2 hrs of a late call) is confirmed directly to work this way — not
-   * yet checked against a real paystub (docs/BUILD_PLAN.md Phase 06).
+   * (0-24) — everything else is derived from this. Confirmed directly:
+   * the holiday-worked premium (1.5x) is capped at the 12-hr entitlement
+   * itself, even on a full 24-hr shift — working more than 12 hours of a
+   * holiday doesn't earn more premium, it just reverts to being an
+   * ordinary worked (regular) day past that point:
+   *   - min(worked, 12) hrs pay 1.5x (holiday-worked)
+   *   - max(0, worked - 12) hrs pay straight, counting toward the 106-hr
+   *     cap like any other regular hours (the excess isn't "holiday" pay
+   *     anymore, just an ordinary work day that happens to fall on one)
+   *   - max(0, 12 - worked) hrs of the entitlement that went unworked
+   *     still pay straight, excluded from the cap (holiday-observed)
+   * A holdover of just part of the entitlement (e.g. 2 hrs of a late
+   * call) works the same way (2 HW + 10 HO). Not yet checked against a
+   * real paystub (docs/BUILD_PLAN.md Phase 06).
    */
   holidayHoursWorked: number;
   /**
@@ -158,14 +166,33 @@ export function entriesToBlocks(entries: DayEntry[]): HourBlock[] {
   for (const entry of entries) {
     if (entry.isHoliday) {
       const worked = Math.min(24, Math.max(0, entry.holidayHoursWorked));
-      if (worked > 0) {
+      const destination = entry.holidayWorkedComped ? "comp" : "cash";
+
+      const hwHours = Math.min(worked, HOLIDAY_ENTITLEMENT_HOURS);
+      if (hwHours > 0) {
         blocks.push({
           date: entry.date,
           type: "holidayWorked",
-          hours: worked,
-          destination: entry.holidayWorkedComped ? "comp" : "cash",
+          hours: hwHours,
+          destination,
         });
       }
+
+      // Hours worked past the 12-hr entitlement don't earn more holiday
+      // premium — they're just an ordinary regular day past that point.
+      const excessRegularHours = Math.max(
+        0,
+        worked - HOLIDAY_ENTITLEMENT_HOURS,
+      );
+      if (excessRegularHours > 0) {
+        blocks.push({
+          date: entry.date,
+          type: "regular",
+          hours: excessRegularHours,
+          destination,
+        });
+      }
+
       const leftover = Math.max(0, HOLIDAY_ENTITLEMENT_HOURS - worked);
       if (leftover > 0) {
         blocks.push({
@@ -220,11 +247,14 @@ export function blocksToEntries(
     const dayBlocks = blocksByDate.get(entry.date) ?? [];
 
     if (entry.isHoliday) {
-      const worked = dayBlocks.find((b) => b.type === "holidayWorked");
+      const hwBlock = dayBlocks.find((b) => b.type === "holidayWorked");
+      const excessBlock = dayBlocks.find((b) => b.type === "regular");
       return {
         ...entry,
-        holidayHoursWorked: worked?.hours ?? 0,
-        holidayWorkedComped: worked?.destination === "comp",
+        holidayHoursWorked: (hwBlock?.hours ?? 0) + (excessBlock?.hours ?? 0),
+        holidayWorkedComped:
+          hwBlock?.destination === "comp" ||
+          (!hwBlock && excessBlock?.destination === "comp"),
       };
     }
 

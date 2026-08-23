@@ -148,6 +148,53 @@ describe("entriesToBlocks / blocksToEntries round-trip", () => {
     expect(roundTripped).toEqual(entries);
   });
 
+  it("caps the holiday-worked premium at 12 hrs — a full 24-hr shift is 12 HW + 12 RG", () => {
+    // Confirmed directly: working more than the 12-hr entitlement doesn't
+    // earn more premium — the excess just reverts to an ordinary regular
+    // day (and counts toward the 106-hr cap like any other regular hours,
+    // unlike the capped HW portion which stays excluded).
+    const period = year.periods[4];
+    const entries = defaultDayEntries(year, "A", period); // default: fully worked
+    const blocks = entriesToBlocks(entries);
+    const thanksgivingBlocks = blocks.filter((b) => b.date === "2026-11-26");
+    expect(thanksgivingBlocks).toEqual([
+      {
+        date: "2026-11-26",
+        type: "holidayWorked",
+        hours: 12,
+        destination: "cash",
+      },
+      {
+        date: "2026-11-26",
+        type: "regular",
+        hours: 12,
+        destination: "cash",
+      },
+    ]);
+
+    const profile = {
+      shift: "A" as const,
+      rateSegments: [
+        {
+          effectiveFrom: year.effectiveFrom,
+          hourlyRate: 26.8173,
+          incentiveTotal: 0,
+        },
+      ],
+    };
+    const gross = computePeriod(year, profile, thanksgivingBlocks).gross;
+    // 12 hrs @ 1.5x + 12 hrs @ 1x (no OT — only 24 hrs, nowhere near 106).
+    expect(gross).toBeCloseTo(12 * 1.5 * 26.8173 + 12 * 26.8173, 4);
+  });
+
+  it("round-trips a fully-worked holiday past the 12-hr cap", () => {
+    const period = year.periods[4];
+    const entries = defaultDayEntries(year, "A", period);
+    const blocks = entriesToBlocks(entries);
+    const roundTripped = blocksToEntries(year, "A", period, blocks);
+    expect(roundTripped).toEqual(entries);
+  });
+
   it("banks worked holiday hours as comp ($0) when holidayWorkedComped is set", () => {
     // Confirmed by a real timecard: working a holiday and taking it as
     // comp instead of cash means no straight/premium pay for the worked
@@ -166,7 +213,13 @@ describe("entriesToBlocks / blocksToEntries round-trip", () => {
       {
         date: "2026-11-26",
         type: "holidayWorked",
-        hours: 24,
+        hours: 12,
+        destination: "comp",
+      },
+      {
+        date: "2026-11-26",
+        type: "regular",
+        hours: 12,
         destination: "comp",
       },
     ]);
