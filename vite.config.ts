@@ -4,14 +4,14 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
-  base: "/Pay-calculator-/",
+  base: "/pay-check/",
   plugins: [
     react(),
     VitePWA({
       registerType: "autoUpdate",
       manifest: {
-        name: "48/96 Pay Calculator",
-        short_name: "48/96",
+        name: "Pay Check",
+        short_name: "Pay Check",
         description: "Fire department shift pay calculator",
         // The manifest can only carry one value, so it takes Deep Alpine —
         // the brand colour, readable as a splash/task-switcher tint in
@@ -20,8 +20,8 @@ export default defineConfig({
         theme_color: "#1b3b36",
         background_color: "#1b3b36",
         display: "standalone",
-        start_url: "/Pay-calculator-/",
-        scope: "/Pay-calculator-/",
+        start_url: "/pay-check/",
+        scope: "/pay-check/",
         icons: [
           {
             src: "pwa-192x192.png",

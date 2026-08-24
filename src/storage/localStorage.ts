@@ -9,6 +9,12 @@ import {
   type StoredDataV1,
 } from "./schema";
 
+// Deliberately NOT renamed to match the app's "Pay Check" branding —
+// changing this key would orphan every profile and period already entered
+// on a real device (this app's own test devices included), since the app
+// would look for a key that doesn't exist and silently show a blank
+// first-run Setup instead. The storage key has no user-visible tie to the
+// app's display name; there's nothing to gain by moving it.
 export const STORAGE_KEY = "pay-calculator:v1";
 
 /** The subset of the Storage interface we need — lets tests inject a fake
