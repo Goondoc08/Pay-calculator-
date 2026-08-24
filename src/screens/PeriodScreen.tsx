@@ -39,7 +39,7 @@ function DayHeader({
   holidayName?: string | undefined;
 }) {
   return (
-    <div className="flex items-baseline gap-2">
+    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
       <span className="text-sm font-semibold">
         {weekdayName(entry.date)} {entry.date.slice(8)}
       </span>
@@ -83,15 +83,18 @@ function HolidayRow({
   ].filter(Boolean) as string[];
 
   return (
-    <div className="rounded-lg border border-holiday bg-holiday-soft p-3">
+    <div className="rounded-lg border border-holiday bg-holiday-soft p-3 lg:p-2">
       <DayHeader entry={entry} holidayName={holidayName} />
-      <div className="mt-2 flex items-center gap-2">
-        <label className="text-sm text-ink-muted" htmlFor={`hw-${entry.date}`}>
+      <div className="mt-2 flex items-center gap-2 lg:flex-col lg:items-stretch lg:gap-1">
+        <label
+          className="text-sm text-ink-muted lg:text-xs"
+          htmlFor={`hw-${entry.date}`}
+        >
           Hours worked
         </label>
         <input
           id={`hw-${entry.date}`}
-          className={`${FIELD} w-20`}
+          className={`${FIELD} w-20 lg:w-full`}
           type="number"
           min={0}
           max={24}
@@ -152,28 +155,45 @@ function LineFields({
   onRemove?: (() => void) | undefined;
 }) {
   return (
-    <div className="flex items-center gap-2">
-      <select
-        aria-label="Hour type"
-        className={`${FIELD} min-w-0 flex-1`}
-        value={line.type}
-        onChange={(e) => {
-          const type = e.target.value as DayEntryType;
-          const hours = type === "off" ? 0 : line.hours || scheduledHours || 24;
-          onChange({ ...line, type, hours });
-        }}
-      >
-        {(Object.keys(TYPE_LABELS) as DayEntryType[]).map((t) => (
-          <option key={t} value={t}>
-            {TYPE_LABELS[t]}
-          </option>
-        ))}
-      </select>
+    // Side by side below lg, where a row has the full page width to work
+    // with; stacked at lg+, where each card is one of seven columns and a
+    // select + hours input + grade select side by side wouldn't fit.
+    <div className="flex flex-wrap items-center gap-2 lg:flex-col lg:flex-nowrap lg:items-stretch lg:gap-1">
+      <div className="flex flex-1 items-center gap-2 lg:w-full lg:flex-none">
+        <select
+          aria-label="Hour type"
+          className={`${FIELD} min-w-0 flex-1`}
+          value={line.type}
+          onChange={(e) => {
+            const type = e.target.value as DayEntryType;
+            const hours =
+              type === "off" ? 0 : line.hours || scheduledHours || 24;
+            onChange({ ...line, type, hours });
+          }}
+        >
+          {(Object.keys(TYPE_LABELS) as DayEntryType[]).map((t) => (
+            <option key={t} value={t}>
+              {TYPE_LABELS[t]}
+            </option>
+          ))}
+        </select>
+
+        {onRemove && (
+          <button
+            type="button"
+            aria-label="Remove this entry"
+            className="shrink-0 rounded-md px-2 py-1 text-ink-muted hover:text-warn lg:hidden"
+            onClick={onRemove}
+          >
+            ✕
+          </button>
+        )}
+      </div>
 
       {line.type !== "off" && (
         <input
           aria-label="Hours"
-          className={`${FIELD} w-20`}
+          className={`${FIELD} w-20 lg:w-full`}
           type="number"
           min={0}
           step="0.25"
@@ -188,7 +208,7 @@ function LineFields({
       {line.type === "stepUp" && (
         <select
           aria-label="Step-up grade"
-          className={`${FIELD} w-20`}
+          className={`${FIELD} w-20 lg:w-full`}
           value={line.grade}
           onChange={(e) =>
             onChange({ ...line, grade: e.target.value as PayGrade })
@@ -206,10 +226,10 @@ function LineFields({
         <button
           type="button"
           aria-label="Remove this entry"
-          className="shrink-0 rounded-md px-2 py-1 text-ink-muted hover:text-warn"
+          className="hidden shrink-0 rounded-md text-xs text-ink-muted hover:text-warn lg:block"
           onClick={onRemove}
         >
-          ✕
+          ✕ remove
         </button>
       )}
     </div>
@@ -254,12 +274,12 @@ function DayRow({
 
   return (
     <div
-      className={`rounded-lg border border-line bg-surface p-3 ${
+      className={`rounded-lg border border-line bg-surface p-3 lg:p-2 ${
         isIdle ? "opacity-60" : ""
       }`}
     >
       <DayHeader entry={entry} />
-      <div className="mt-2 flex flex-col gap-2">
+      <div className="mt-2 flex flex-col gap-2 lg:gap-1.5">
         {entry.lines.map((line, i) => (
           <LineFields
             key={i}
@@ -558,7 +578,11 @@ export function PeriodScreen({
         />
       )}
 
-      <div className="flex flex-col gap-2">
+      {/* Below lg, one column, full-width rows — a scrolling list. At lg+
+          there's room for the sheet's own shape: two rows of seven, Sat
+          through Fri, matching the source workbooks this app is checked
+          against. */}
+      <div className="flex flex-col gap-2 lg:grid lg:grid-cols-7 lg:items-start lg:gap-2">
         {entries.map((entry, i) =>
           entry.isHoliday ? (
             <HolidayRow
