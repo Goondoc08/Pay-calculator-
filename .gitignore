@@ -10,3 +10,7 @@ coverage
 data/source/
 *.xlsx
 *.tsbuildinfo
+
+# font binaries for scripts/generate-icons.cjs — easy to re-fetch, no reason
+# to carry font files in repo history (see that script's header comment)
+scripts/.icon-fonts/

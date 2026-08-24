@@ -9,6 +9,14 @@ export default [
   { ignores: ["dist", "coverage", "dev-dist"] },
   js.configs.recommended,
   {
+    // Plain Node scripts (e.g. scripts/generate-icons.cjs) — not part of
+    // the typechecked app, so no tsParser/project here, just Node globals.
+    files: ["**/*.cjs"],
+    languageOptions: {
+      globals: { ...globals.node },
+    },
+  },
+  {
     files: ["**/*.{ts,tsx}"],
     languageOptions: {
       parser: tsParser,
