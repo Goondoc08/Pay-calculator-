@@ -29,7 +29,11 @@ const sample: StoredDataV1 = {
       { date: "2026-09-27", type: "regular", hours: 24, destination: "cash" },
     ],
   },
-  settings: { selectedYearId: "FY27", installCardDismissed: false },
+  settings: {
+    selectedYearId: "FY27",
+    installCardDismissed: false,
+    textSize: "normal",
+  },
   progression: null,
   certifications: null,
 };

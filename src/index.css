@@ -98,6 +98,21 @@ body,
   min-height: 100%;
 }
 
+/**
+ * Text size setting (Settings > Display). Tailwind's default type scale and
+ * spacing scale are both rem-based, so scaling the root font-size scales
+ * text, padding, and gaps together — "boxes" grow along with the words,
+ * which is the point for anyone who needs bigger tap targets as much as
+ * bigger letters. Percentages compose with the browser/OS's own text-size
+ * setting instead of overriding it with a fixed px value.
+ */
+html[data-text-size="large"] {
+  font-size: 112.5%;
+}
+html[data-text-size="xlarge"] {
+  font-size: 137.5%;
+}
+
 body {
   background: rgb(var(--c-canvas));
   color: rgb(var(--c-text));

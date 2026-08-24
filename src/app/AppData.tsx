@@ -15,12 +15,14 @@ import {
   type StoredDataV1,
   type certificationsSchema,
   type progressionSchema,
+  type textSizeSchema,
 } from "../storage/schema";
 import type { HourBlock, Profile } from "../engine/types";
 import type { z } from "zod";
 
 type Progression = z.infer<typeof progressionSchema>;
 type Certifications = z.infer<typeof certificationsSchema>;
+export type TextSize = z.infer<typeof textSizeSchema>;
 
 interface AppDataValue {
   profile: Profile | null;
@@ -39,6 +41,8 @@ interface AppDataValue {
   setSelectedYearId: (id: string | null) => void;
   installCardDismissed: boolean;
   dismissInstallCard: () => void;
+  textSize: TextSize;
+  setTextSize: (size: TextSize) => void;
   saveError: string | null;
   exportJson: () => string;
   importJson: (json: string) => { ok: boolean; error: string | undefined };
@@ -129,6 +133,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }));
   }, [update]);
 
+  const setTextSize = useCallback(
+    (textSize: TextSize) => {
+      update((prev) => ({
+        ...prev,
+        settings: { ...prev.settings, textSize },
+      }));
+    },
+    [update],
+  );
+
   const exportJson = useCallback(() => exportToJson(data), [data]);
 
   const importJson = useCallback(
@@ -164,6 +178,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       setSelectedYearId,
       installCardDismissed: data.settings.installCardDismissed,
       dismissInstallCard,
+      textSize: data.settings.textSize,
+      setTextSize,
       saveError,
       exportJson,
       importJson,
@@ -175,6 +191,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       data.certifications,
       data.settings.selectedYearId,
       data.settings.installCardDismissed,
+      data.settings.textSize,
       setProfile,
       setProgression,
       setCertifications,
@@ -182,6 +199,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       setPeriodBlocks,
       setSelectedYearId,
       dismissInstallCard,
+      setTextSize,
       saveError,
       exportJson,
       importJson,

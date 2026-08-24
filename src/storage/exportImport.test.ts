@@ -41,7 +41,11 @@ const sample: StoredDataV1 = {
       },
     ],
   },
-  settings: { selectedYearId: "FY27", installCardDismissed: false },
+  settings: {
+    selectedYearId: "FY27",
+    installCardDismissed: false,
+    textSize: "normal",
+  },
   progression: {
     grade: "F1",
     anniversaryDate: "2027-04-01",

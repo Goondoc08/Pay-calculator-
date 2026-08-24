@@ -44,12 +44,12 @@ function DayHeader({
         {weekdayName(entry.date)} {entry.date.slice(8)}
       </span>
       {entry.scheduledHours > 0 && !entry.isHoliday && (
-        <span className="text-[10px] uppercase tracking-wide text-ink-muted">
+        <span className="text-[0.625rem] uppercase tracking-wide text-ink-muted">
           scheduled
         </span>
       )}
       {holidayName && (
-        <span className="truncate rounded-full bg-holiday-soft px-2 py-0.5 text-[10px] font-medium text-holiday-ink">
+        <span className="truncate rounded-full bg-holiday-soft px-2 py-0.5 text-[0.625rem] font-medium text-holiday-ink">
           {holidayName}
         </span>
       )}
@@ -111,13 +111,13 @@ function HolidayRow({
           chips.map((chip) => (
             <span
               key={chip}
-              className="rounded bg-surface px-1.5 py-0.5 text-[11px] font-medium text-holiday-ink"
+              className="rounded bg-surface px-1.5 py-0.5 text-[0.6875rem] font-medium text-holiday-ink"
             >
               {chip}
             </span>
           ))
         ) : (
-          <span className="text-[11px] text-ink-muted">—</span>
+          <span className="text-[0.6875rem] text-ink-muted">—</span>
         )}
       </div>
       {/* HWA banks just the 1.5x premium — the RG for hours actually worked
@@ -433,7 +433,7 @@ function PeriodPickerModal({
               }`}
             >
               <span className="text-sm font-medium">{p.n}</span>
-              <span className="text-[10px] text-ink-muted">
+              <span className="text-[0.625rem] text-ink-muted">
                 {p.start.slice(5)}
               </span>
             </button>
@@ -604,11 +604,11 @@ export function PeriodScreen({
 
       <div className="fixed inset-x-0 bottom-0 border-t border-line bg-surface/95 backdrop-blur">
         <div className="mx-auto max-w-md px-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2">
-          <div className="flex justify-between text-[11px] text-ink-muted">
+          <div className="flex justify-between text-[0.6875rem] text-ink-muted">
             <span>Total hours {result.totalHours}</span>
             {result.otHours > 0 && <span>{result.otHours} over 106</span>}
           </div>
-          <div className="mt-1 grid grid-cols-3 gap-2 text-[11px]">
+          <div className="mt-1 grid grid-cols-3 gap-2 text-[0.6875rem]">
             <div>
               <div className="text-ink-muted">Regular</div>
               <div className="tabular-nums">${regularTotal.toFixed(2)}</div>

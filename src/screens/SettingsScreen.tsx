@@ -1,6 +1,13 @@
 import { useRef, useState } from "react";
+import type { TextSize } from "../app/AppData";
 import { useAppData } from "../app/AppData";
 import { AVAILABLE_YEARS } from "../app/years";
+
+const TEXT_SIZE_OPTIONS: { value: TextSize; label: string }[] = [
+  { value: "normal", label: "Normal" },
+  { value: "large", label: "Large" },
+  { value: "xlarge", label: "X-Large" },
+];
 
 export function SettingsScreen({
   onEditSetup,
@@ -11,8 +18,15 @@ export function SettingsScreen({
   onOpenHelp: () => void;
   onWiped: () => void;
 }) {
-  const { exportJson, importJson, wipe, selectedYearId, setSelectedYearId } =
-    useAppData();
+  const {
+    exportJson,
+    importJson,
+    wipe,
+    selectedYearId,
+    setSelectedYearId,
+    textSize,
+    setTextSize,
+  } = useAppData();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [confirmingWipe, setConfirmingWipe] = useState(false);
@@ -48,6 +62,29 @@ export function SettingsScreen({
   return (
     <div className="flex flex-col gap-5 p-4 text-ink">
       <h1 className="text-xl font-semibold">Settings</h1>
+
+      <div className="flex flex-col gap-2 rounded-lg border border-line p-3">
+        <h2 className="text-sm font-medium text-ink-muted">Text size</h2>
+        <div className="flex gap-2">
+          {TEXT_SIZE_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setTextSize(opt.value)}
+              className={`flex-1 rounded-md border px-3 py-2 text-sm ${
+                textSize === opt.value
+                  ? "border-accent bg-accent-soft font-semibold text-accent"
+                  : "border-line"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-ink-muted">
+          Scales text and buttons throughout the app. Takes effect immediately.
+        </p>
+      </div>
 
       <div className="flex flex-col gap-2 rounded-lg border border-line p-3">
         <h2 className="text-sm font-medium text-ink-muted">Active year</h2>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppDataProvider, useAppData } from "./app/AppData";
 import { findPeriodForDate } from "./app/period";
 import { getYear, resolveActiveYear, todayIso } from "./app/years";
@@ -38,10 +38,17 @@ function TabBar({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void }) {
 }
 
 function AppShell() {
-  const { profile, selectedYearId, setSelectedYearId } = useAppData();
+  const { profile, selectedYearId, setSelectedYearId, textSize } = useAppData();
   const [setupOpen, setSetupOpen] = useState(profile === null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("period");
+
+  // The text-size setting scales via a CSS rule keyed off this attribute on
+  // <html> (src/index.css) — <html> lives outside the React root, so it's
+  // synced imperatively rather than rendered as JSX.
+  useEffect(() => {
+    document.documentElement.setAttribute("data-text-size", textSize);
+  }, [textSize]);
 
   const today = todayIso();
   const year = selectedYearId
