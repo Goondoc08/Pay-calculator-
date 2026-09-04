@@ -63,6 +63,14 @@ This also resolves the `FD — Fire Ride Up Driver Diff` pay code seen on a real
 check: it's the same mechanism as "step-up," just the payroll system's label for
 riding up specifically into Driver/Operator (F2).
 
+**Correction (reported bug, confirmed from a member's workbook formula):** Step 0
+of the covered grade is only the *base* portion. The member's own incentive/cert
+pay is still added on top — `=(E1+D17)*B4` (E1 the step-up rate, D17 the
+incentive-per-hour) — the same `+ D17` every other paid row on the sheet
+carries. Riding up doesn't suspend your personal certs. The engine was landing
+on Step 0 alone with no incentive added, underpaying every step-up hour for
+anyone carrying incentive pay.
+
 **Promotions** use the same Step 0 landing rule, permanently rather than for a
 shift: FF→DO, DO→LT, LT→CP, and CP→BC promotions all land at Step 0 of the new
 grade.

@@ -334,10 +334,73 @@ describe("computePeriod", () => {
     expect(result.gross).toBeCloseTo(4495.23, 2);
   });
 
+  it("prices TIFMAS hours at 1.5x base rate plus straight-time incentive", () => {
+    // Reported bug: a member's real check showed TIFMAS gross of $4,160.03
+    // for 90 hrs at $29.3040 base + $2.2665 incentive; the engine was
+    // pricing TIFMAS like regular hours (effectiveRate), landing $1,318.68
+    // short. Confirmed from the member's workbook formula
+    // `=(B1*B13*1.5)+(D17*B13)` == hours * (1.5 * hourlyRate + incentiveTotal).
+    const profile: Profile = {
+      shift: "A",
+      rateSegments: [
+        {
+          effectiveFrom: "2026-09-26",
+          hourlyRate: 29.304,
+          incentiveTotal: 2.2665,
+        },
+      ],
+      longevityAnnual: 0,
+    };
+    const blocks: HourBlock[] = [
+      { date: "2026-09-27", type: "tifmas", hours: 90, destination: "cash" },
+    ];
+
+    const result = computePeriod(year, profile, blocks);
+    const tifmasLine = result.lineItems.find((li) => li.label === "TIFMAS");
+    const expected = 90 * (1.5 * 29.304 + 2.2665); // 4160.025, rounds to the check's $4,160.03
+    expect(tifmasLine?.amount).toBeCloseTo(expected, 4);
+    expect(result.gross).toBeCloseTo(expected, 4);
+  });
+
   it("computeStepUp returns Step 0 of the covered grade, not a percentage", () => {
     expect(computeStepUp(year, "F2")).toBe(35.3302);
     expect(computeStepUp(year, "F3")).toBe(41.7566);
     expect(computeStepUp(year, "F4")).toBe(48.8773);
+  });
+
+  it("step-up pay adds the member's own incentive on top of the covered grade's Step 0", () => {
+    // Reported bug: riding up as F2 was paying Step 0 ($35.3302) alone,
+    // dropping the member's own incentive pay ($3.0906/hr). Confirmed from
+    // the member's workbook formula `=(E1+D17)*B4` where E1 is the step-up
+    // rate and D17 the incentive-per-hour.
+    const profile: Profile = {
+      shift: "A",
+      rateSegments: [
+        {
+          effectiveFrom: "2026-09-26",
+          hourlyRate: 26.8173,
+          incentiveTotal: 3.0906,
+        },
+      ],
+      longevityAnnual: 0,
+    };
+    const blocks: HourBlock[] = [
+      {
+        date: "2026-09-27",
+        type: "stepUp",
+        hours: 24,
+        destination: "cash",
+        grade: "F2",
+      },
+    ];
+
+    const result = computePeriod(year, profile, blocks);
+    const stepUpLine = result.lineItems.find((li) =>
+      li.label.startsWith("Step-up"),
+    );
+    const expected = 24 * (35.3302 + 3.0906);
+    expect(stepUpLine?.amount).toBeCloseTo(expected, 4);
+    expect(result.gross).toBeCloseTo(expected, 4);
   });
 
   it("blends step-up and regular hours into one FLSA rate when mixed", () => {

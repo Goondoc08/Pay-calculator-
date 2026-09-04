@@ -53,10 +53,18 @@ export interface StepUpBlock extends BlockBase {
   type: "stepUp";
   hours: number;
   destination: Destination;
-  /** The grade being covered — step-up pays Step 0 of this grade. */
+  /**
+   * The grade being covered — step-up pays Step 0 of this grade, plus the
+   * member's own incentive pay (riding up doesn't suspend personal certs).
+   */
   grade: PayGrade;
 }
 
+/**
+ * State TIFMAS mobilization pay. Counts toward the 106-hr cap like regular
+ * hours, but prices at 1.5x the base hourly rate plus incentive at straight
+ * time — see `tifmasRate` in rate.ts.
+ */
 export interface TifmasBlock extends BlockBase {
   type: "tifmas";
   hours: number;

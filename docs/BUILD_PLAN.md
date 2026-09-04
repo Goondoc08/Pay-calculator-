@@ -374,8 +374,8 @@ simplified HO/HW/PTO columns:
 | Holiday worked | No | Paid at 1.5×, or diverted to comp — member's choice, per block |
 | Holiday observed (not worked) | No | Paid at 12 hrs straight, or accrued to use later — member's choice |
 | PTO taken (vacation / sick / comp) | No | Paid straight |
-| Step-up / acting pay | Yes | Rank-based flat rate (F2/F3/F4), blended into the FLSA rate when mixed with regular hours |
-| TIFMAS deployment | Yes (confirm) | Own premium structure, TBD from a TIFMAS stub |
+| Step-up / acting pay | Yes | Rank-based flat rate (F2/F3/F4) *plus the member's own incentive pay*, blended into the FLSA rate when mixed with regular hours |
+| TIFMAS deployment | Yes | 1.5x base hourly rate + incentive at straight time, confirmed from a member's workbook formula `=(B1*B13*1.5)+(D17*B13)` |
 
 Banked hours (comp or accrued) contribute **$0** to this check's gross —
 regardless of what rate they bank at internally (e.g. OT comps at 1.5 banked

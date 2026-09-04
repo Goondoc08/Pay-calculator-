@@ -1,5 +1,5 @@
 import type { PayYear } from "../data/schema";
-import { effectiveRate } from "./rate";
+import { effectiveRate, incentiveRate, tifmasRate } from "./rate";
 import type {
   HourBlock,
   LineItem,
@@ -23,7 +23,12 @@ function rateForBlock(
   block: HourBlock,
 ): number {
   if (block.type === "stepUp") {
-    return computeStepUp(payYear, block.grade);
+    return (
+      computeStepUp(payYear, block.grade) + incentiveRate(profile, block.date)
+    );
+  }
+  if (block.type === "tifmas") {
+    return tifmasRate(profile, block.date);
   }
   return effectiveRate(profile, block.date);
 }
