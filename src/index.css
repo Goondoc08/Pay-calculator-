@@ -57,8 +57,21 @@
   color-scheme: light;
 }
 
+/**
+ * Dark tokens live in two places so both the OS-driven default and the
+ * manual Settings > Appearance toggle land on the same values:
+ *
+ * - The media query covers "system" (no `data-theme` on <html>) — guarded
+ *   with `:not([data-theme="light"])` so a manual "Light" pick can still
+ *   override a dark OS preference.
+ * - `[data-theme="dark"]` covers a manual "Dark" pick regardless of what
+ *   the OS prefers.
+ *
+ * Never edit one block without the other — see src/App.tsx for how
+ * `data-theme` gets set (or removed, for "system").
+ */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --c-canvas: 17 25 35; /* #111923 Slate Ink */
     --c-surface: 26 37 49;
     --c-surface-alt: 34 48 62;
@@ -90,6 +103,39 @@
 
     color-scheme: dark;
   }
+}
+
+:root[data-theme="dark"] {
+  --c-canvas: 17 25 35;
+  --c-surface: 26 37 49;
+  --c-surface-alt: 34 48 62;
+  --c-line: 44 62 80;
+  --c-line-strong: 61 81 101;
+  --c-text: 233 238 238;
+  --c-text-muted: 147 163 173;
+
+  --c-brand: 27 59 54;
+  --c-brand-ink: 234 242 240;
+  --c-structure: 44 62 80;
+
+  --c-accent: 111 179 166;
+  --c-accent-ink: 13 26 23;
+  --c-accent-soft: 29 58 52;
+
+  --c-holiday: 169 142 240;
+  --c-holiday-ink: 201 182 247;
+  --c-holiday-soft: 42 36 64;
+
+  --c-warn: 240 145 61;
+  --c-warn-soft: 51 36 26;
+  --c-good: 111 179 166;
+  --c-brass: 199 154 74;
+
+  --c-danger: 232 115 106;
+  --c-danger-ink: 42 16 13;
+  --c-danger-soft: 51 32 30;
+
+  color-scheme: dark;
 }
 
 html,

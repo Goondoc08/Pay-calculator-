@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import type { TextSize } from "../app/AppData";
+import type { TextSize, Theme } from "../app/AppData";
 import { useAppData } from "../app/AppData";
 import { AVAILABLE_YEARS } from "../app/years";
 
@@ -7,6 +7,12 @@ const TEXT_SIZE_OPTIONS: { value: TextSize; label: string }[] = [
   { value: "normal", label: "Normal" },
   { value: "large", label: "Large" },
   { value: "xlarge", label: "X-Large" },
+];
+
+const THEME_OPTIONS: { value: Theme; label: string }[] = [
+  { value: "system", label: "System" },
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
 ];
 
 export function SettingsScreen({
@@ -26,6 +32,8 @@ export function SettingsScreen({
     setSelectedYearId,
     textSize,
     setTextSize,
+    theme,
+    setTheme,
   } = useAppData();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -62,6 +70,29 @@ export function SettingsScreen({
   return (
     <div className="flex flex-col gap-5 p-4 text-ink">
       <h1 className="text-xl font-semibold">Settings</h1>
+
+      <div className="flex flex-col gap-2 rounded-lg border border-line p-3">
+        <h2 className="text-sm font-medium text-ink-muted">Appearance</h2>
+        <div className="flex gap-2">
+          {THEME_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setTheme(opt.value)}
+              className={`flex-1 rounded-md border px-3 py-2 text-sm ${
+                theme === opt.value
+                  ? "border-accent bg-accent-soft font-semibold text-accent"
+                  : "border-line"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-ink-muted">
+          "System" follows your device's light/dark setting.
+        </p>
+      </div>
 
       <div className="flex flex-col gap-2 rounded-lg border border-line p-3">
         <h2 className="text-sm font-medium text-ink-muted">Text size</h2>

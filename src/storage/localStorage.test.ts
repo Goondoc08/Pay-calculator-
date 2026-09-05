@@ -33,6 +33,7 @@ const sample: StoredDataV1 = {
     selectedYearId: "FY27",
     installCardDismissed: false,
     textSize: "normal",
+    theme: "system",
   },
   progression: null,
   certifications: null,

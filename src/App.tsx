@@ -38,7 +38,8 @@ function TabBar({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void }) {
 }
 
 function AppShell() {
-  const { profile, selectedYearId, setSelectedYearId, textSize } = useAppData();
+  const { profile, selectedYearId, setSelectedYearId, textSize, theme } =
+    useAppData();
   const [setupOpen, setSetupOpen] = useState(profile === null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("period");
@@ -49,6 +50,17 @@ function AppShell() {
   useEffect(() => {
     document.documentElement.setAttribute("data-text-size", textSize);
   }, [textSize]);
+
+  // "system" removes the attribute entirely so index.css's
+  // prefers-color-scheme media query is the only thing deciding — "light"
+  // and "dark" force it explicitly, overriding the OS/browser preference.
+  useEffect(() => {
+    if (theme === "system") {
+      document.documentElement.removeAttribute("data-theme");
+    } else {
+      document.documentElement.setAttribute("data-theme", theme);
+    }
+  }, [theme]);
 
   const today = todayIso();
   const year = selectedYearId

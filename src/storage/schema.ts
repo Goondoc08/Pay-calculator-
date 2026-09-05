@@ -108,6 +108,9 @@ export const periodEntriesSchema = z.record(z.string(), hourBlockListSchema);
 
 export const textSizeSchema = z.enum(["normal", "large", "xlarge"]);
 
+/** "system" follows the OS/browser's own light-dark preference. */
+export const themeSchema = z.enum(["system", "light", "dark"]);
+
 export const settingsSchema = z.object({
   selectedYearId: z.string().nullable(),
   // .default(false) so data saved before this field existed still parses —
@@ -115,6 +118,8 @@ export const settingsSchema = z.object({
   installCardDismissed: z.boolean().default(false),
   // .default("normal") so data saved before this field existed still parses.
   textSize: textSizeSchema.default("normal"),
+  // .default("system") so data saved before this field existed still parses.
+  theme: themeSchema.default("system"),
 });
 
 export const storedDataV1Schema = z.object({
@@ -138,6 +143,7 @@ export function emptyStoredData(): StoredDataV1 {
       selectedYearId: null,
       installCardDismissed: false,
       textSize: "normal",
+      theme: "system",
     },
     progression: null,
     certifications: null,

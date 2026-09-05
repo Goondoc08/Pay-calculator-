@@ -16,6 +16,7 @@ import {
   type certificationsSchema,
   type progressionSchema,
   type textSizeSchema,
+  type themeSchema,
 } from "../storage/schema";
 import type { HourBlock, Profile } from "../engine/types";
 import type { z } from "zod";
@@ -23,6 +24,7 @@ import type { z } from "zod";
 type Progression = z.infer<typeof progressionSchema>;
 type Certifications = z.infer<typeof certificationsSchema>;
 export type TextSize = z.infer<typeof textSizeSchema>;
+export type Theme = z.infer<typeof themeSchema>;
 
 interface AppDataValue {
   profile: Profile | null;
@@ -43,6 +45,8 @@ interface AppDataValue {
   dismissInstallCard: () => void;
   textSize: TextSize;
   setTextSize: (size: TextSize) => void;
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
   saveError: string | null;
   exportJson: () => string;
   importJson: (json: string) => { ok: boolean; error: string | undefined };
@@ -143,6 +147,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     [update],
   );
 
+  const setTheme = useCallback(
+    (theme: Theme) => {
+      update((prev) => ({
+        ...prev,
+        settings: { ...prev.settings, theme },
+      }));
+    },
+    [update],
+  );
+
   const exportJson = useCallback(() => exportToJson(data), [data]);
 
   const importJson = useCallback(
@@ -180,6 +194,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       dismissInstallCard,
       textSize: data.settings.textSize,
       setTextSize,
+      theme: data.settings.theme,
+      setTheme,
       saveError,
       exportJson,
       importJson,
@@ -192,6 +208,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       data.settings.selectedYearId,
       data.settings.installCardDismissed,
       data.settings.textSize,
+      data.settings.theme,
       setProfile,
       setProgression,
       setCertifications,
@@ -200,6 +217,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       setSelectedYearId,
       dismissInstallCard,
       setTextSize,
+      setTheme,
       saveError,
       exportJson,
       importJson,
